@@ -1,10 +1,12 @@
 [package]
-name = "particle_filter"
+name    = "particle_filter"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-nalgebra = "0.32.2" # linear algebra library rand = "0.8.5" # random number generator library
+nalgebra    = "0.32.2"  # linear algebra library 
+rand        = "0.8.5"   # random number generator library
+gif         = "0.12.0"  # library for encoding images to gif 
 
 [[bin]]
 name = "partile_filter"

@@ -1,0 +1,85 @@
+/// TODO
+use nalgebra::Vector2;
+use gif::{Frame, Encoder, Repeat};
+use std::fs::File;
+use std::borrow::Cow;
+
+pub struct DataGiffer {
+    default_frame: ([u8; crate::consts::FLAT_ARRAY_SIZE], [u8; crate::consts::FLAT_ARRAY_SIZE], [u8; crate::consts::FLAT_ARRAY_SIZE]),
+    frames: Vec<([u8; crate::consts::FLAT_ARRAY_SIZE], [u8; crate::consts::FLAT_ARRAY_SIZE], [u8; crate::consts::FLAT_ARRAY_SIZE])>,
+    size: (i32, i32),
+    origin: (i32, i32),
+}
+
+fn within_frame(point: (i32, i32), size: (i32, i32)) -> bool {
+    return 0 <= point.0 && point.0 <= size.0 && 0 <= point.1 && point.1 <= size.1;
+}
+
+impl DataGiffer {
+
+    pub fn new() -> Self {
+        let new_data_giffer = DataGiffer{
+            default_frame : Self::create_default_frame(),
+            frames: Vec::default(),
+            size : crate::consts::GRID_SIZE,
+            origin : crate::consts::ORIGIN,
+        };
+        assert!(new_data_giffer.size.0 >= 0 && new_data_giffer.size.1 >= 0);
+        assert!(within_frame(new_data_giffer.origin, new_data_giffer.size));
+        return new_data_giffer;
+    }
+
+    fn create_default_frame() -> ([u8; crate::consts::FLAT_ARRAY_SIZE], [u8; crate::consts::FLAT_ARRAY_SIZE], [u8; crate::consts::FLAT_ARRAY_SIZE]) {
+        let mut default_frame_r:  [u8; crate::consts::FLAT_ARRAY_SIZE] = [crate::consts::BACKGROUND_COLOR[0]; crate::consts::FLAT_ARRAY_SIZE];
+        let mut default_frame_g:  [u8; crate::consts::FLAT_ARRAY_SIZE] = [crate::consts::BACKGROUND_COLOR[1]; crate::consts::FLAT_ARRAY_SIZE];
+        let mut default_frame_b:  [u8; crate::consts::FLAT_ARRAY_SIZE] = [crate::consts::BACKGROUND_COLOR[2]; crate::consts::FLAT_ARRAY_SIZE];
+
+        return (default_frame_r, default_frame_g, default_frame_b);
+    }
+
+    pub fn draw_points(&mut self, state_vecs: Vec<Vector2<f32>>) -> bool {
+        let mut all_inside: bool = true;
+        let frame = &mut self.default_frame.clone();
+
+        for vector in state_vecs {
+
+            // FIXME: would probably be better to do positivity check and type casting here and keep size, origin and NUM_CHANNELS as usize
+            let pixel_point: (i32, i32) = (f32::round(vector[0]) as i32 + self.origin.0, f32::round(vector[1]) as i32 + self.origin.1); 
+            
+            if !within_frame(pixel_point, self.size) {
+                all_inside = false;
+            } else {
+                self.draw_point(pixel_point, frame);
+            }
+        }
+        self.frames.push(*frame);
+        return all_inside;
+    }
+
+    fn draw_point(&self, pixel_point: (i32, i32), frame: &mut ([u8; crate::consts::FLAT_ARRAY_SIZE], [u8; crate::consts::FLAT_ARRAY_SIZE], [u8; crate::consts::FLAT_ARRAY_SIZE])) {
+        assert!(pixel_point.0 >= 0 && pixel_point.1 >= 0);
+        //let y = pixel_point.0;
+        //let x = pixel_point.1;
+        //let n = self.size.0;
+        //let m = self.size.1;
+        //let c = crate::consts::NUM_CHANNELS;
+        //let obj_idx: usize = 0; // make argument when adding multiple objects.
+        //let flat_rgb_pixel_index_range = (y*m + x) as usize .. (y*m + x) as usize;
+        //frame[ flat_rgb_pixel_index_range ].copy_from_slice(&crate::consts::FOREGROUND_COLORS[obj_idx]); 
+        frame.0[ pixel_point.1*self.size.1 + pixel_point.0 ].copy_from_slice(&crate::consts::FOREGROUND_COLORS[obj_idx].0);
+    }
+
+    pub fn export_gif(&self) {
+        let mut file = File::create(crate::consts::ANIMATION_FILENAME).unwrap();
+        let mut encoder = Encoder::new(&mut file, self.size.0 as u16, self.size.1 as u16, &[]).unwrap();
+        encoder.set_repeat(Repeat::Infinite).unwrap( );
+        
+        for frame in &self.frames {
+            let mut gif_frame = Frame::default();
+            gif_frame.width = self.size.0 as u16;
+            gif_frame.height = self.size.1 as u16;
+            gif_frame.buffer = Cow::Borrowed(frame);
+            encoder.write_frame(&gif_frame).unwrap();
+        }
+    }
+}

@@ -1,19 +1,22 @@
 /// Defines functions to simulate a dynamic system
 
+
+use nalgebra::Vector2;
+
+use crate::sys::Sys;
+
 pub fn print_something() {
     println!("heyo");
 }
 
-pub fn rk4_step(f: fn(f32, u8), x: Vector2<f32>, m: u8,  dt: f32) -> Vec<f32> {
-    let k1 = f(x, m);
-    let k2 = f(&x.iter().zip(&k1).map(|(xi, ki)| xi + ki * dt / 2.0).collect::<Vec<_>>());
-    let k3 = f(t + dt / 2.0, &x.iter().zip(&k2).map(|(xi, ki)| xi + ki * dt / 2.0).collect::<Vec<_>>());
-    let k4 = f(t + dt, &x.iter().zip(&k3).map(|(xi, ki)| xi + ki * dt).collect::<Vec<_>>());
-    x.iter()
-        .zip(&k1)
-        .zip(&k2)
-        .zip(&k3)
-        .zip(&k4)
-        .map(|((((xi, ki1), ki2), ki3), ki4)| xi + (ki1 + 2.0 * ki2 + 2.0 * ki3 + ki4) * dt / 6.0)
-        .collect::<Vec<_>>()
+pub fn rk4_step(t: f32, f: fn(f32, Vector2<f32>, u8) -> Vector2<f32>, x: Vector2<f32>, m: u8,  dt: f32) -> Vector2<f32> {
+    let k1 = f(t, x, m);
+    let k2 = f(t + (1.0/2.0)*dt, x + (1.0/2.0)*dt*k1, m);
+    let k3 = f(t + (1.0/2.0)*dt, x + (1.0/2.0)*dt*k2, m);
+    let k4 = f(t + dt, x + dt*k3, m);
+    return x + (1.0/6.0)*(k1 + 2.0*k2 + 2.0*k3 + k4)
+}
+
+pub fn simulation_step(t: f32, system: &mut crate::sys::Sys, m: u8, dt: f32) {
+    system.x = rk4_step(t, system.f, system.x, m, dt);
 }
