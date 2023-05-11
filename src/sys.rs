@@ -3,6 +3,9 @@
 use nalgebra::Vector2;
 use rand::rngs::ThreadRng;
 use rand_distr::Distribution;
+use rand::prelude::SliceRandom;
+
+use crate::consts as consts;
 
 pub struct Sys {
     pub x: Vector2<f32>,                                // state
@@ -68,8 +71,12 @@ pub fn example_hybrid_system(t: f32, x: Vector2<f32>, m: u8) -> Vector2<f32> {
     return x_dot;
 }
 
-//pub fn motion_model_1(t: f32, x: Vector2<f32>, m: u8) -> Vector2<f32> {
-//    const a: f32 = 0.5;
-//    let e: f32 = if m == 1 { x - circle_path(t); }
-//   return a*(-x); // x_dot = a
-//}
+// TODO: description 
+// WARNING: true model change is equal to filter model change (unrealistic)
+pub fn true_model_change_posterior(m: u8, rng: &mut ThreadRng) -> u8 {
+    let mut choice = m;
+    if consts::MODEL_CHANGE.sample(rng) { 
+        while choice == m { choice = *consts::VALID_MODELS.choose(rng).unwrap(); }
+    }
+    return choice;
+}

@@ -16,28 +16,35 @@ fn main() {
 
     let mut data_giffer = anim::DataGiffer::new();
     let mut system = sys::Sys {x: consts::x0, f: sys::example_hybrid_system, h: sys::measurement_function};
+    let mut system2 = sys::Sys {x: consts::x0 + Vector2::new(10.0, -7.0), f: sys::example_hybrid_system, h: sys::measurement_function};
     let rng = &mut thread_rng();
 
-    let mut m: u8 = 1;
+    let mut m: u8 = 1; // TODO: make vector of modes
+    let mut m2: u8 = 2;
     let mut t: f32 = 0.0;
 
-    let mut filter = particle_filter::ParticleFilter::initialize(&vec![(system.h)(t, system.x, m, rng)], rng);
+    let mut y = vec![(system.h)(t, system.x, m, rng), (system2.h)(t, system2.x, m2, rng)];
+    let mut filter = particle_filter::ParticleFilter::initialize(&y, rng);
     
     for i in 0..((consts::END_TIME/consts::dt) as usize) {
         
         t += consts::dt;
-        if t >= (1.0/2.0)*consts::END_TIME { m = 2; }
 
-        let y = (system.h)(t, system.x, m, rng);
+        let (points_to_draw, ordered_colors) = color_helper(&vec![&samples_to_points_helper(filter.samples), &y, &filter.estimates, &vec![system.x, system2.x]]);
+        data_giffer.draw_points(&points_to_draw, &ordered_colors);
 
-        filter.predict(t, m, consts::dt, rng);
-        filter.update(&vec![y], m, rng);
+        filter.predict(t, consts::dt, rng);
+
+        sim::step(t, &mut system, m, consts::dt);
+        sim::step(t, &mut system2, m2, consts::dt);
+        y = vec![(system.h)(t, system.x, m, rng), (system2.h)(t, system2.x, m2, rng)];
+
+        filter.update(&y, rng);
         filter.resample(rng);
 
-        let (points_to_draw, ordered_colors) = color_helper(&vec![vec![system.x], vec![y], filter.samples.to_vec(), vec![filter.estimate]]);
+        m = sys::true_model_change_posterior(m, rng); 
+        m2 = sys::true_model_change_posterior(m2, rng);
         
-        data_giffer.draw_points(&points_to_draw, &ordered_colors);
-        sim::step(t, &mut system, m, consts::dt);
     }
     
     print!("\n\nDone simulating.\n\nExporting animation...");
@@ -50,13 +57,13 @@ fn main() {
 // Pass a Vec of Vec of Vector2 and receive a concatenated Vec of Vector2 and a Vec of &str that
 // can be used to get RGB values for colors. Each element of the concatenated Vec then has the same
 // color as the other elements in the original (inner) Vec it came from.
-fn color_helper<'a>(points_to_draw: &Vec<Vec<Vector2<f32>>>) -> (Vec<Vector2<f32>>, Vec<&'a str>) {
-    let availale_colors: Vec<&str> = vec!["green", "red", "blue", "orange"];
+fn color_helper<'a>(points_to_draw: &Vec<&Vec<Vector2<f32>>>) -> (Vec<Vector2<f32>>, Vec<&'a str>) {
+    let availale_colors: Vec<&str> = vec!["blue", "red", "orange", "green"];
     let mut ordered_colors: Vec<&str> = Vec::new();
     let mut concatenated_vector: Vec<Vector2<f32>> = Vec::new();
     
     let mut i = 0;
-    for point_set in points_to_draw {
+    for &point_set in points_to_draw {
         for point in point_set {
             ordered_colors.push(&availale_colors[i]); 
         }
@@ -65,3 +72,12 @@ fn color_helper<'a>(points_to_draw: &Vec<Vec<Vector2<f32>>>) -> (Vec<Vector2<f32
     }
     return (concatenated_vector, ordered_colors);
 }
+
+fn samples_to_points_helper(samples: [(Vector2<f32>, u8); consts::INITIAL_NUM_PARTICLES]) -> Vec<Vector2<f32>> {
+    let mut point_vector: Vec<Vector2<f32>> = Vec::with_capacity(consts::INITIAL_NUM_PARTICLES);
+    for (point, _) in samples {
+            point_vector.push(point);
+    }
+    return point_vector;
+}
+

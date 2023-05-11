@@ -1,6 +1,6 @@
 /// Global Project Constants
 use nalgebra::Vector2;
-use rand_distr::{Poisson, Normal};
+use rand_distr::{Poisson, Normal, Uniform, Bernoulli};
 use lazy_static::lazy_static;
 use crate::particle_filter::InitialDistributionType;
 use std::collections::HashMap;
@@ -13,20 +13,23 @@ pub const x0: Vector2<f32> = Vector2::new(10.0, -10.0);
 pub const dt: f32 = 0.03333; 
 pub const END_TIME: f32 = 20.0;
 
-// Measurement Parameters
-// Random Number Generation Parameters
+// Random Number Generation Parameters and Distributions
 pub const POISSON_MEAN: f32 = 2.0;
 pub const GAUSSIAN_MEAN: f32 = 0.0;
 pub const GAUSSIAN_STANDARD_DEVIATION: f32 = 1.5;
 lazy_static! {
+    // TODO: rename a bunch of these
 pub static ref POISSON_DISTRIBUTION: Poisson<f32> = Poisson::new(POISSON_MEAN).unwrap(); 
 pub static ref GAUSSIAN_DISTRIBUTION: Normal<f32> = Normal::new(GAUSSIAN_MEAN, GAUSSIAN_STANDARD_DEVIATION).unwrap();
+pub static ref ARTIFICIAL_PROCESS_NOISE: Uniform<f32> = Uniform::new(-3.0, 3.0);
+pub static ref MODEL_CHANGE: Bernoulli = Bernoulli::new(0.01).unwrap();
 }
 
 // Particle filter Parameters
-pub const INITIAL_NUM_PARTICLES: usize = 500;
+pub const INITIAL_NUM_PARTICLES: usize = 50000;
 pub const INITIAL_ERROR_BOUND: f32 = 50.0;
 pub const INITIAL_DISTRIBUTION_TYPE: InitialDistributionType = InitialDistributionType::UNIFORM;
+pub const VALID_MODELS: [u8; 2] = [1, 2];
 
 // Animation Parameters
 pub const ANIMATION_FILENAME: &str = "animation.gif";

@@ -11,7 +11,7 @@ pub struct DataGiffer {
 }
 
 fn within_frame(point: (i32, i32), size: (i32, i32)) -> bool {
-    return 0 <= point.0 && point.0 <= size.0 && 0 <= point.1 && point.1 <= size.1;
+    return 0 <= point.0 && point.0 < size.0 && 0 <= point.1 && point.1 < size.1;
 }
 
 impl DataGiffer {
