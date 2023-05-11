@@ -26,7 +26,7 @@ pub static ref MODEL_CHANGE: Bernoulli = Bernoulli::new(0.01).unwrap();
 }
 
 // Particle filter Parameters
-pub const INITIAL_NUM_PARTICLES: usize = 50000;
+pub const INITIAL_NUM_PARTICLES: usize = 500;
 pub const INITIAL_ERROR_BOUND: f32 = 50.0;
 pub const INITIAL_DISTRIBUTION_TYPE: InitialDistributionType = InitialDistributionType::UNIFORM;
 pub const VALID_MODELS: [u8; 2] = [1, 2];
