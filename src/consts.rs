@@ -1,18 +1,46 @@
 /// Global Project Constants
 use nalgebra::Vector2;
+use rand_distr::{Poisson, Normal};
+use lazy_static::lazy_static;
+use crate::particle_filter::InitialDistributionType;
+use std::collections::HashMap;
+use arrayref::array_ref;
 
+// Simulation Parameters 
 #[allow(non_upper_case_globals)]
-pub const x0: Vector2<f32> = Vector2::new(0.0, 0.0);
+pub const x0: Vector2<f32> = Vector2::new(10.0, -10.0);
 #[allow(non_upper_case_globals)]
 pub const dt: f32 = 0.03333; 
-//pub const num_particles: u8 = 50;
+pub const END_TIME: f32 = 20.0;
+
+// Measurement Parameters
+// Random Number Generation Parameters
+pub const POISSON_MEAN: f32 = 2.0;
+pub const GAUSSIAN_MEAN: f32 = 0.0;
+pub const GAUSSIAN_STANDARD_DEVIATION: f32 = 1.5;
+lazy_static! {
+pub static ref POISSON_DISTRIBUTION: Poisson<f32> = Poisson::new(POISSON_MEAN).unwrap(); 
+pub static ref GAUSSIAN_DISTRIBUTION: Normal<f32> = Normal::new(GAUSSIAN_MEAN, GAUSSIAN_STANDARD_DEVIATION).unwrap();
+}
+
+// Particle filter Parameters
+pub const INITIAL_NUM_PARTICLES: usize = 500;
+pub const INITIAL_ERROR_BOUND: f32 = 50.0;
+pub const INITIAL_DISTRIBUTION_TYPE: InitialDistributionType = InitialDistributionType::UNIFORM;
 
 // Animation Parameters
 pub const ANIMATION_FILENAME: &str = "animation.gif";
-
 pub const BACKGROUND_COLOR: [u8; 3] = [30, 17, 43];
-pub const FOREGROUND_COLORS: [[u8; 3]; 1] = [[171, 111, 14]];
 
+lazy_static!{
+pub static ref COLORS: HashMap<&'static str,  [u8; 3]> = [
+    ("orange",  [171, 111, 14]),
+    ("blue",    [50,  109, 168]),
+    ("red",     [168, 58,  50]),
+    ("green",   [50,  168, 109]),
+].iter().cloned().collect(); 
+}
+pub const FOREGROUND_COLORS: [[u8; 3]; 1] = [[171, 111, 14]];
 pub const GRID_SIZE: (i32, i32) = (100, 100);
 pub const ORIGIN: (i32, i32) = (50, 50);
 pub const NUM_CHANNELS: i32 = 3;

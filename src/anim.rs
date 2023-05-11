@@ -2,7 +2,6 @@
 use nalgebra::Vector2;
 use gif::{Frame, Encoder, Repeat};
 use std::fs::File;
-use std::borrow::Cow;
 
 pub struct DataGiffer {
     default_frame: [u8; crate::consts::FLAT_ARRAY_SIZE],
@@ -38,12 +37,12 @@ impl DataGiffer {
         }
         return default_frame;
     }
-
-    pub fn draw_points(&mut self, state_vecs: Vec<Vector2<f32>>) -> bool {
+ 
+    pub fn draw_points(&mut self, state_vecs: &Vec<Vector2<f32>>, color_indices: &Vec<&str>) -> bool {
         let mut all_inside: bool = true;
         let frame = &mut self.default_frame.clone();
 
-        for vector in state_vecs {
+        for (vector, color) in state_vecs.iter().zip(color_indices.iter()) {
 
             // FIXME: would probably be better to do positivity check and type casting here and keep size, origin and NUM_CHANNELS as usize
             let pixel_point: (i32, i32) = (f32::round(vector[0]) as i32 + self.origin.0, f32::round(vector[1]) as i32 + self.origin.1); 
@@ -51,23 +50,21 @@ impl DataGiffer {
             if !within_frame(pixel_point, self.size) {
                 all_inside = false;
             } else {
-                self.draw_point(pixel_point, frame);
+                self.draw_point(pixel_point, frame, color);
             }
         }
         self.frames.push(*frame);
         return all_inside;
     }
 
-    fn draw_point(&self, pixel_point: (i32, i32), frame: &mut [u8]) {
+    fn draw_point(&self, pixel_point: (i32, i32), frame: &mut [u8], color: &str) {
         assert!(pixel_point.0 >= 0 && pixel_point.1 >= 0);
         let y = pixel_point.0;
         let x = pixel_point.1;
-        let n = self.size.0;
         let m = self.size.1;
         let c = crate::consts::NUM_CHANNELS;
-        let obj_idx: usize = 0; // make argument when adding multiple objects.
         let flat_rgb_pixel_index_range = (y*m*c + x*c) as usize .. (y*m*c + x*c + c) as usize;
-        frame[ flat_rgb_pixel_index_range ].copy_from_slice(&crate::consts::FOREGROUND_COLORS[obj_idx]); 
+        frame[ flat_rgb_pixel_index_range ].copy_from_slice(crate::consts::COLORS.get(color).unwrap()); 
     }
 
     pub fn export_gif(&self) {
