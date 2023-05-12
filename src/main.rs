@@ -15,32 +15,39 @@ fn main() {
     io::stdout().flush().unwrap();
 
     let mut data_giffer = anim::DataGiffer::new();
-    let mut system = sys::Sys {x: consts::x0, f: sys::example_hybrid_system, h: sys::measurement_function};
-    let mut system2 = sys::Sys {x: consts::x0 + Vector2::new(10.0, -7.0), f: sys::example_hybrid_system, h: sys::measurement_function};
     let rng = &mut thread_rng();
 
-    let mut m: u8 = 1; // TODO: make vector of modes
+    let mut system = sys::Sys {x: consts::x0, f: sys::example_hybrid_system, h: sys::measurement_function};
+    let mut system2 = sys::Sys {x: consts::x0 + Vector2::new(10.0, -7.0), f: sys::example_hybrid_system, h: sys::measurement_function};
+
+    let mut m: u8 = 1; // TODO: make vector of modes instead
     let mut m2: u8 = 2;
     let mut t: f32 = 0.0;
 
-    let mut y = vec![(system.h)(t, system.x, m, rng), (system2.h)(t, system2.x, m2, rng)];
+    let mut y       = vec![(system.h)(t, system.x, m, rng), (system2.h)(t, system2.x, m2, rng)];
+    let mut clutter = sys::clutter(consts::CLUTTER_AMOUNT, rng);
+    y.extend_from_slice(&clutter);
+
     let mut filter = particle_filter::ParticleFilter::initialize(&y, rng);
     
     for i in 0..((consts::END_TIME/consts::dt) as usize) {
         
         t += consts::dt;
 
-        let (points_to_draw, ordered_colors) = color_helper(&vec![&samples_to_points_helper(filter.samples), &y, &filter.estimates, &vec![system.x, system2.x]]);
+        let (points_to_draw, ordered_colors) = color_helper(&vec![&clutter, &samples_to_points_helper(filter.samples), &y, &filter.estimates, &vec![system.x, system2.x]]);
         data_giffer.draw_points(&points_to_draw, &ordered_colors);
 
         filter.predict(t, consts::dt, rng);
 
         sim::step(t, &mut system, m, consts::dt);
         sim::step(t, &mut system2, m2, consts::dt);
+
         y = vec![(system.h)(t, system.x, m, rng), (system2.h)(t, system2.x, m2, rng)];
+        clutter = sys::clutter(consts::CLUTTER_AMOUNT, rng);
+        y.extend_from_slice(&clutter);
 
         filter.update(&y, rng);
-        filter.resample(rng);
+        filter.resample(&y, rng);
 
         m = sys::true_model_change_posterior(m, rng); 
         m2 = sys::true_model_change_posterior(m2, rng);
@@ -58,7 +65,7 @@ fn main() {
 // can be used to get RGB values for colors. Each element of the concatenated Vec then has the same
 // color as the other elements in the original (inner) Vec it came from.
 fn color_helper<'a>(points_to_draw: &Vec<&Vec<Vector2<f32>>>) -> (Vec<Vector2<f32>>, Vec<&'a str>) {
-    let availale_colors: Vec<&str> = vec!["blue", "red", "orange", "green"];
+    let availale_colors: Vec<&str> = vec!["matt_pink", "blue", "red", "orange", "green"];
     let mut ordered_colors: Vec<&str> = Vec::new();
     let mut concatenated_vector: Vec<Vector2<f32>> = Vec::new();
     

@@ -4,7 +4,6 @@ use rand_distr::{Poisson, Normal, Uniform, Bernoulli};
 use lazy_static::lazy_static;
 use crate::particle_filter::InitialDistributionType;
 use std::collections::HashMap;
-use arrayref::array_ref;
 
 // Simulation Parameters 
 #[allow(non_upper_case_globals)]
@@ -12,6 +11,7 @@ pub const x0: Vector2<f32> = Vector2::new(10.0, -10.0);
 #[allow(non_upper_case_globals)]
 pub const dt: f32 = 0.03333; 
 pub const END_TIME: f32 = 20.0;
+pub const CLUTTER_AMOUNT: usize = 35;
 
 // Random Number Generation Parameters and Distributions
 pub const POISSON_MEAN: f32 = 2.0;
@@ -27,6 +27,7 @@ pub static ref MODEL_CHANGE: Bernoulli = Bernoulli::new(0.01).unwrap();
 
 // Particle filter Parameters
 pub const INITIAL_NUM_PARTICLES: usize = 500;
+pub const A_FEW_PARTICLES: usize = 5;
 pub const INITIAL_ERROR_BOUND: f32 = 50.0;
 pub const INITIAL_DISTRIBUTION_TYPE: InitialDistributionType = InitialDistributionType::UNIFORM;
 pub const VALID_MODELS: [u8; 2] = [1, 2];
@@ -37,10 +38,11 @@ pub const BACKGROUND_COLOR: [u8; 3] = [30, 17, 43];
 
 lazy_static!{
 pub static ref COLORS: HashMap<&'static str,  [u8; 3]> = [
-    ("orange",  [171, 111, 14]),
-    ("blue",    [50,  109, 168]),
-    ("red",     [168, 58,  50]),
-    ("green",   [50,  168, 109]),
+    ("orange",      [171, 111, 14]),
+    ("blue",        [50,  109, 168]),
+    ("red",         [168, 58,  50]),
+    ("green",       [50,  168, 109]),
+    ("matt_pink",   [79,  13,  59]),
 ].iter().cloned().collect(); 
 }
 pub const FOREGROUND_COLORS: [[u8; 3]; 1] = [[171, 111, 14]];

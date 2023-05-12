@@ -1,5 +1,6 @@
 use std::f32::INFINITY;
 use std::f32::consts::PI;
+use std::vec::IntoIter;
 
 use lazy_static::lazy_static;
 use nalgebra::Vector2;
@@ -8,6 +9,7 @@ use rand_distr::{Uniform, Normal, Distribution};
 use rand::seq::SliceRandom;
 use rand::distributions::WeightedIndex;
 use special::Gamma;
+use itertools::Itertools; 
 
 use std::io;
 use std::io::Write;
@@ -66,10 +68,10 @@ impl<'a> ParticleFilter {
         return particle_filter;
     }
 
-    // TODO: description
+    /// Sample from mode change and motion model posterior probability distributions
     pub fn predict(&mut self, t: f32, dt: f32, rng: &mut ThreadRng) {
         // TODO: estimate velocity
-        let v_hat: f32 = 15.0;
+        let v_hat: f32 = 50.0;
 
         for s in &mut self.samples {
             s.1 = model_change_posterior(s.1, rng);
@@ -77,7 +79,8 @@ impl<'a> ParticleFilter {
         }
     }
 
-    // TODO: description
+    /// Update sample weights according to measurments model conditional probability.
+    /// Associates samples to their nearest measurment.
     pub fn update(&mut self, measurements: &Vec<Vector2<f32>>, rng: &mut ThreadRng) {
 
         let lambda: f32         = consts::POISSON_MEAN; // using correct noise model for now.
@@ -110,26 +113,29 @@ impl<'a> ParticleFilter {
         normalize(&mut self.weights);
     }
 
-    // TODO: description
-    pub fn resample(&mut self, rng: &mut ThreadRng) {
+    // Resample locally around each measurment with associated samples, using their weights.
+    pub fn resample(&mut self, measurements: &Vec<Vector2<f32>>, rng: &mut ThreadRng) { 
         // TODO: interpolate weights to get a smoother distribution which helps with sample variety
             
         // add noise that is inversely proportional to number of samples?
         let n: usize = *self.associations.iter().max().unwrap();
-        /// ----------- TODO: make function
+        //----------- TODO: make function
         let mut proposal_distributions: Vec<WeightedIndex<f32>> = Vec::with_capacity(n);
         let mut weight_sets: Vec<Vec<f32>>                  = Vec::with_capacity(n);
         let mut index_sets: Vec<Vec<usize>>                 = Vec::with_capacity(n);
 
-        for i in 0..n { weight_sets.push(Vec::new()); index_sets.push(Vec::new()); }
+        for i in 0..(n+1) { weight_sets.push(Vec::new()); index_sets.push(Vec::new()); }
 
         for (i, &association) in self.associations.iter().enumerate() { 
             weight_sets[association].push(self.weights[i]); 
             index_sets[association].push(i);
         }
 
-        for weights in weight_sets { proposal_distributions.push(WeightedIndex::new(&weights).unwrap()); }
-        /// -------------
+        while weight_sets.contains(&Vec::new()) { handle_measurement_without_association(&mut weight_sets, &mut index_sets, &mut self.samples, measurements, rng); }
+
+        for weights in weight_sets { 
+            proposal_distributions.push(WeightedIndex::new(&weights).unwrap()); }
+        //-------------
 
         let mut sampled_values: Vec<(Vector2<f32>, u8)> = Vec::with_capacity(self.samples.len());
         for i in 0..self.samples.len() {
@@ -140,16 +146,6 @@ impl<'a> ParticleFilter {
         assert!(sampled_values.len() == self.samples.len());
         for i in 0..self.samples.len() { self.samples[i] = sampled_values[i]; }
 
-        ////////////////////
-
-        let proposal_distribution = WeightedIndex::new(&self.weights).unwrap();
-        let mut sampled_values: Vec<(Vector2<f32>, u8)> = Vec::with_capacity(self.samples.len());
-
-
-        assert!(self.samples.len() == self.weights.len());
-        for _ in 0..self.samples.len()   { sampled_values.push(self.samples[proposal_distribution.sample(rng)]); }
-        for i in 0..sampled_values.len() { self.samples[i] = sampled_values[i]; }
-        
         // WARNING: need to rebalance number of samples between tracked objects
         // might be a good idea to spawn particles around measurments that identified as object
         // but how to identify an object? If an object appears, and there are some particles around
@@ -166,6 +162,33 @@ impl<'a> ParticleFilter {
         //              over time generate more particles around it, if it persists (i.e, it's not
         //              noise).
 
+    }
+}
+
+// Steal some samples from the largest distribution and give them to the smallest, which can be empty
+fn handle_measurement_without_association(weight_sets: &mut Vec<Vec<f32>>, 
+                                          index_sets: &mut Vec<Vec<usize>>, 
+                                          samples: &mut [(Vector2<f32>, u8); consts::INITIAL_NUM_PARTICLES], 
+                                          measurements: &Vec<Vector2<f32>>, 
+                                          rng: &mut ThreadRng) {
+
+    assert!(weight_sets.contains(&Vec::new()));
+    let mut longest: usize = 0;
+    let mut shortest: usize = 0;
+
+    for (idx, weights) in weight_sets.iter().enumerate() { 
+        longest = if weights.len() > weight_sets[longest].len() { idx } else { longest };
+        shortest = if weights.len() < weight_sets[shortest].len() { idx } else { shortest };
+    }
+
+    let indices_to_remove: &Vec<usize> = &rand::seq::index::sample(rng, weight_sets[longest].len(), consts::A_FEW_PARTICLES).into_vec().into_iter().sorted_by(|a, b| b.cmp(a)).collect(); // indices_to_remove.sort_by(|a, b| b.cmp(a);
+    
+    for &idx in indices_to_remove {                                                                                                                                                                                                                              
+        weight_sets[longest].remove(idx);
+        weight_sets[shortest].push(1.0 / indices_to_remove.len() as f32);
+        let stolen = index_sets[longest].remove(idx);
+        index_sets[shortest].push(stolen);
+        samples[stolen].0 = measurements[shortest] + Vector2::new(consts::ARTIFICIAL_PROCESS_NOISE.sample(rng), consts::ARTIFICIAL_PROCESS_NOISE.sample(rng)); 
     }
 }
 
@@ -209,7 +232,7 @@ fn bivariate_continuous_iid_poisson(x: Vector2<f32>, lambda: f32) -> f32 {
 fn closest(x: Vector2<f32>, measurements: &Vec<Vector2<f32>>) -> (usize, Vector2<f32>) {
     let mut norm2 = INFINITY;
     let mut closest: Vector2<f32> = (*measurements)[0]; 
-    let mut idx: usize;
+    let mut idx: usize = 0;
     for (i, &y) in measurements.iter().enumerate() { 
         let dist = x.metric_distance(&y);
         (norm2, closest, idx) = if dist < norm2 { (dist, y, i) } else { (norm2, closest, idx) };
