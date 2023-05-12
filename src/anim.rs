@@ -43,8 +43,8 @@ impl DataGiffer {
         let frame = &mut self.default_frame.clone();
 
         for (vector, color) in state_vecs.iter().zip(color_indices.iter()) {
-
-            // FIXME: would probably be better to do positivity check and type casting here and keep size, origin and NUM_CHANNELS as usize
+            if vector[0] >= f32::MAX - (self.origin.0 + 5 as f32)
+            || vector[1] >= f32::MAX 
             let pixel_point: (i32, i32) = (f32::round(vector[0]) as i32 + self.origin.0, f32::round(vector[1]) as i32 + self.origin.1); 
             
             if !within_frame(pixel_point, self.size) {

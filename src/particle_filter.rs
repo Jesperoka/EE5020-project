@@ -71,7 +71,7 @@ impl<'a> ParticleFilter {
     /// Sample from mode change and motion model posterior probability distributions
     pub fn predict(&mut self, t: f32, dt: f32, rng: &mut ThreadRng) {
         // TODO: estimate velocity
-        let v_hat: f32 = 50.0;
+        let v_hat: f32 = 99.0;
 
         for s in &mut self.samples {
             s.1 = model_change_posterior(s.1, rng);
@@ -83,33 +83,23 @@ impl<'a> ParticleFilter {
     /// Associates samples to their nearest measurment.
     pub fn update(&mut self, measurements: &Vec<Vector2<f32>>, rng: &mut ThreadRng) {
 
-        let lambda: f32         = consts::POISSON_MEAN; // using correct noise model for now.
-        let mu: Vector2<f32>    = Vector2::new(consts::GAUSSIAN_MEAN, consts::GAUSSIAN_MEAN);
-        let sigma: f32          = consts::GAUSSIAN_STANDARD_DEVIATION;
 
         
 
         for (i, s) in self.samples.iter().enumerate() {
             
             let (idx, y) = closest(s.0, measurements);
-            self.associations[i] = idx; 
-
-            match s.1 { // WARNING: this is where we determine which y should be used for each sample
-                1 => {
-                    let diff = y - s.0; // FIXME: this is ugly, move to a separate function
-                    self.weights[i] = if diff[0] >= 0.0 && diff[1] >= 0.0 { bivariate_continuous_iid_poisson(diff, lambda) } else { 0.0 }; 
-                    // self.weights[i] = bivariate_iid_gaussian(y, self.samples[i] + mu, sigma); 
-                }
-                2 => { self.weights[i] = bivariate_iid_gaussian(y, s.0 + mu, sigma); }
-                _ => { print!("Undefined mode."); }
-            }
+            self.associations[i] = idx;
+            self.weights[i] = measurement_model_posterior(s, y);
         }
+
         // TODO: make estimates. IDEA convolve to sharpen global distribution before picking N highest weights, so that
         // we dont just get two estimates around the same point. 
         // Estimates need to have a certain weight, and associated samples need to sum up to a
         // certain weight as well?
-        self.estimates = vec![self.samples[argmax(&self.weights).unwrap()].0]; // TODO: make estimate
+
         add_noise(&mut self.weights, rng); // helps prevent degenerate cases
+        self.estimates = vec![self.samples[argmax(&self.weights).unwrap()].0]; // TODO: make estimate
         normalize(&mut self.weights);
     }
 
@@ -117,7 +107,6 @@ impl<'a> ParticleFilter {
     pub fn resample(&mut self, measurements: &Vec<Vector2<f32>>, rng: &mut ThreadRng) { 
         // TODO: interpolate weights to get a smoother distribution which helps with sample variety
             
-        // add noise that is inversely proportional to number of samples?
         let n: usize = *self.associations.iter().max().unwrap();
         //----------- TODO: make function
         let mut proposal_distributions: Vec<WeightedIndex<f32>> = Vec::with_capacity(n);
@@ -192,7 +181,7 @@ fn handle_measurement_without_association(weight_sets: &mut Vec<Vec<f32>>,
     }
 }
 
-// TODO: description
+/// Model change markov chain assumption (for now, this corresponds to the true posterior)
 fn model_change_posterior(m: u8, rng: &mut ThreadRng) -> u8 {
     let mut choice = m;
     if consts::MODEL_CHANGE.sample(rng) { 
@@ -201,7 +190,7 @@ fn model_change_posterior(m: u8, rng: &mut ThreadRng) -> u8 {
     return choice;
 }
 
-// Simulation step for a particle
+/// Simulation step for a particle
 fn motion_model_posterior(t: f32, x: Vector2<f32>,  m: u8, v_hat: f32, dt: f32, rng: &mut ThreadRng) -> Vector2<f32> {
     
     // TODO: replace goals with velocity estimate for more realism/generalizability
@@ -214,6 +203,21 @@ fn motion_model_posterior(t: f32, x: Vector2<f32>,  m: u8, v_hat: f32, dt: f32, 
         2 => { return x + v_hat*(model_2_goal - x)*dt + artificial_noise; }
         _ => { println!("Undefined mode."); return Vector2::new(0.0, 0.0); }
     } 
+}
+
+/// Measurement model used for importance weighing 
+fn measurement_model_posterior(s: &(Vector2<f32>, u8), y: Vector2<f32>) -> f32 {
+    let lambda: f32         = consts::POISSON_MEAN; // using correct noise model for now.
+    let mu: Vector2<f32>    = Vector2::new(consts::GAUSSIAN_MEAN, consts::GAUSSIAN_MEAN);
+    let sigma: f32          = consts::GAUSSIAN_STANDARD_DEVIATION;
+    let weight: f32;    
+
+    match s.1 { 
+        1 => { weight = if (y - s.0)[0] >= 0.0 && (y - s.0)[1] >= 0.0 { bivariate_continuous_iid_poisson(y - s.0, lambda) }  else { 0.0 }; }
+        2 => { weight = bivariate_iid_gaussian(y, s.0 + mu, sigma); }
+        _ => { weight = 0.0; print!("Undefined mode."); }
+    }
+    return if !weight.is_nan() { weight } else { 0.0 };
 }
 
 // Density function for bivariate gaussian PDF for two i.i.d random variables x[0] and x[1]
