@@ -42,7 +42,7 @@ pub static ref COLORS: HashMap<&'static str,  [u8; 3]> = [
     ("blue",        [50,  109, 168]),
     ("red",         [168, 58,  50]),
     ("green",       [50,  168, 109]),
-    ("matt_pink",   [79,  13,  59]),
+    ("matt_pink",   [51,  20,  54]),
 ].iter().cloned().collect(); 
 }
 pub const FOREGROUND_COLORS: [[u8; 3]; 1] = [[171, 111, 14]];

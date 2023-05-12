@@ -11,6 +11,7 @@ use nalgebra::Vector2;
 use rand::thread_rng;
 
 fn main() {
+    print_start_message();
     print!("\n\nSimulating...");
     io::stdout().flush().unwrap();
 
@@ -20,8 +21,9 @@ fn main() {
     let mut system = sys::Sys {x: consts::x0, f: sys::example_hybrid_system, h: sys::measurement_function};
     let mut system2 = sys::Sys {x: consts::x0 + Vector2::new(10.0, -7.0), f: sys::example_hybrid_system, h: sys::measurement_function};
 
-    let mut m: u8 = 1; // TODO: make vector of modes instead
+    let mut m: u8 = 1; // TODO make vector of modes instead
     let mut m2: u8 = 2;
+
     let mut t: f32 = 0.0;
 
     let mut y       = vec![(system.h)(t, system.x, m, rng), (system2.h)(t, system2.x, m2, rng)];
@@ -58,12 +60,15 @@ fn main() {
     io::stdout().flush().unwrap();
     
     data_giffer.export_gif();
-    print!("\n\nDone exporting.\n"); 
-}
+    print!("\n\nDone exporting. File: "); print!("{}\n", consts::ANIMATION_FILENAME);
 
-// Pass a Vec of Vec of Vector2 and receive a concatenated Vec of Vector2 and a Vec of &str that
-// can be used to get RGB values for colors. Each element of the concatenated Vec then has the same
-// color as the other elements in the original (inner) Vec it came from.
+} // END main()
+
+
+
+/// Pass a Vec of Vec of Vector2 and receive a concatenated Vec of Vector2 and a Vec of &str that
+/// can be used to get RGB values for colors. Each element of the concatenated Vec then has the same
+/// color as the other elements in the original (inner) Vec it came from.
 fn color_helper<'a>(points_to_draw: &Vec<&Vec<Vector2<f32>>>) -> (Vec<Vector2<f32>>, Vec<&'a str>) {
     let availale_colors: Vec<&str> = vec!["matt_pink", "blue", "red", "orange", "green"];
     let mut ordered_colors: Vec<&str> = Vec::new();
@@ -80,6 +85,7 @@ fn color_helper<'a>(points_to_draw: &Vec<&Vec<Vector2<f32>>>) -> (Vec<Vector2<f3
     return (concatenated_vector, ordered_colors);
 }
 
+/// Just extracts the vectors/points we want to draw
 fn samples_to_points_helper(samples: [(Vector2<f32>, u8); consts::INITIAL_NUM_PARTICLES]) -> Vec<Vector2<f32>> {
     let mut point_vector: Vec<Vector2<f32>> = Vec::with_capacity(consts::INITIAL_NUM_PARTICLES);
     for (point, _) in samples {
@@ -88,3 +94,15 @@ fn samples_to_points_helper(samples: [(Vector2<f32>, u8); consts::INITIAL_NUM_PA
     return point_vector;
 }
 
+/// A nice little info message
+fn print_start_message() {
+    print!("\n\nFilter parameters:\n\nNumber of particles: {}", consts::INITIAL_NUM_PARTICLES);
+    print!("\nAmount of clutter at all times: {}", consts::CLUTTER_AMOUNT);
+    print!("\nInitial distribution type: {}", consts::INITIAL_DISTRIBUTION_TYPE.to_string());
+    print!("\nSimulation endtime: {}", consts::END_TIME);
+    print!("\nSimulation timestep (dt): {}", consts::dt);
+    print!("\nSimulation method: {}", "ERK4");
+    print!("\n\nAnimation legend:\n\nTrue state: Green\nEstimated state: Orange\nParticles: Blue\nObject oriented measurements: Red\nClutter: Matt Pink");
+    print!("\n\n");
+    io::stdout().flush().unwrap();
+}

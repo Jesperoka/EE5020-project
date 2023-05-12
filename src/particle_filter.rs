@@ -1,8 +1,10 @@
+use std::any::TypeId;
 use std::f32::INFINITY;
 use std::f32::consts::PI;
 use std::vec::IntoIter;
 
 use lazy_static::lazy_static;
+use nalgebra::Vector;
 use nalgebra::Vector2;
 use rand::rngs::ThreadRng;
 use rand_distr::{Uniform, Normal, Distribution};
@@ -28,6 +30,7 @@ pub enum InitialDistributionType {
     UNIFORM,
     GAUSSIAN,
 }
+
 
 impl<'a> ParticleFilter {
 
@@ -71,7 +74,7 @@ impl<'a> ParticleFilter {
     /// Sample from mode change and motion model posterior probability distributions
     pub fn predict(&mut self, t: f32, dt: f32, rng: &mut ThreadRng) {
         // TODO: estimate velocity
-        let v_hat: f32 = 99.0;
+        let v_hat: f32 = 50.0;
 
         for s in &mut self.samples {
             s.1 = model_change_posterior(s.1, rng);
@@ -98,9 +101,9 @@ impl<'a> ParticleFilter {
         // Estimates need to have a certain weight, and associated samples need to sum up to a
         // certain weight as well?
 
-        add_noise(&mut self.weights, rng); // helps prevent degenerate cases
-        self.estimates = vec![self.samples[argmax(&self.weights).unwrap()].0]; // TODO: make estimate
         normalize(&mut self.weights);
+        self.estimates = self.compute_state_estimates();
+        add_noise(&mut self.weights, rng); // helps prevent degenerate cases
     }
 
     // Resample locally around each measurment with associated samples, using their weights.
@@ -108,6 +111,7 @@ impl<'a> ParticleFilter {
         // TODO: interpolate weights to get a smoother distribution which helps with sample variety
             
         let n: usize = *self.associations.iter().max().unwrap();
+
         //----------- TODO: make function
         let mut proposal_distributions: Vec<WeightedIndex<f32>> = Vec::with_capacity(n);
         let mut weight_sets: Vec<Vec<f32>>                  = Vec::with_capacity(n);
@@ -135,12 +139,6 @@ impl<'a> ParticleFilter {
         assert!(sampled_values.len() == self.samples.len());
         for i in 0..self.samples.len() { self.samples[i] = sampled_values[i]; }
 
-        // WARNING: need to rebalance number of samples between tracked objects
-        // might be a good idea to spawn particles around measurments that identified as object
-        // but how to identify an object? If an object appears, and there are some particles around
-        // it, we can check if the particles remain around it? but that wont work the way it is
-        // now, since I'm not able to track the other object...
-        //
         // Also: do the entropy stuff? or low variance resampling?
         
         // IDEA:    1.  always add uniform samples
@@ -152,9 +150,38 @@ impl<'a> ParticleFilter {
         //              noise).
 
     }
-}
+    fn compute_state_estimates(&self) -> Vec<Vector2<f32>> {
+        let n: usize = *self.associations.iter().max().unwrap();
+        let mut estimates: Vec<Vector2<f32>> = Vec::with_capacity(n);
+        
+        let mut sample_groups: Vec<Vec<Vector2<f32>>> = Vec::with_capacity(n);
+        let mut weight_groups: Vec<Vec<f32>> = Vec::with_capacity(n);
+        for _ in 0..(n+1) { sample_groups.push(Vec::new()); weight_groups.push(Vec::new()); }
+
+        for (i, s) in self.samples.iter().enumerate() {
+            sample_groups[self.associations[i]].push(s.0);
+            weight_groups[self.associations[i]].push(self.weights[i]);
+        }
+        
+        for (weights, samples) in weight_groups.iter().zip(sample_groups.iter()) { 
+            if samples.len() as f32 > consts::INITIAL_NUM_PARTICLES as f32 / usize::max(1, n) as f32
+            && weights.iter().sum::<f32>() > 1.0 / usize::max(1, n) as f32 { 
+                estimates.push(samples[argmax(&weights).unwrap()]); 
+            } 
+        }
+
+        return estimates;
+    }
+
+} // END impl
+
+
+
+
+
 
 // Steal some samples from the largest distribution and give them to the smallest, which can be empty
+// FIXME: name is bad.
 fn handle_measurement_without_association(weight_sets: &mut Vec<Vec<f32>>, 
                                           index_sets: &mut Vec<Vec<usize>>, 
                                           samples: &mut [(Vector2<f32>, u8); consts::INITIAL_NUM_PARTICLES], 
@@ -247,7 +274,7 @@ fn closest(x: Vector2<f32>, measurements: &Vec<Vector2<f32>>) -> (usize, Vector2
 // Scale weights to sum to one (approximately)
 fn normalize(weights: &mut [f32]) {
     let sum: f32 = weights.iter().sum();
-    assert!(sum != 0.0);
+    if sum == 0.0 { return; }
     for weight in weights { *weight /= sum; }
 }
 
@@ -258,8 +285,17 @@ fn add_noise(weights: &mut [f32], rng: &mut ThreadRng) {
 }
 
 // Get the index of the largest value element
-fn argmax(arr: &[f32]) -> Option<usize> {
+fn argmax(arr: &Vec<f32>) -> Option<usize> {
     arr.iter().enumerate().max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap()).map(|(i, _)| i)
 }
 
+// Just an implementation to print
+impl InitialDistributionType {
+    pub fn to_string(&self) -> &str {
+        return match self {
+            InitialDistributionType::UNIFORM => "Uniform",
+            InitialDistributionType::GAUSSIAN => "Gaussian",
+        };
+    }
+}
 // IDEA: get avg distance to the MAP estimate and use it to inform how large the velocity should be
