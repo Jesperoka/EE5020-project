@@ -10,7 +10,7 @@ rand_distr  = "0.4.3"   # fast sampling from common distributions
 gif         = "0.12.0"  # library for encoding images to gif 
 lazy_static = "1.4.0"   # lazy initialization of static globals (should use once_cell in the future) 
 special     = "0.10.2"  # useful to special (mathematical) functions
-arrayref    = "0.3.7"   # using it in the creation of a const global hashmap ¯\_(ツ)_/¯, there has to be a better way...
+itertools   = "0.10.5"  # using it to sort list in a functional style 
 
 [[bin]]
 name = "particle_filter"

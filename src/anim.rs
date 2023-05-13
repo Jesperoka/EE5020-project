@@ -43,8 +43,8 @@ impl DataGiffer {
         let frame = &mut self.default_frame.clone();
 
         for (vector, color) in state_vecs.iter().zip(color_indices.iter()) {
+            if self.might_over_or_underflow(vector) { all_inside = false; continue; }
 
-            // FIXME: would probably be better to do positivity check and type casting here and keep size, origin and NUM_CHANNELS as usize
             let pixel_point: (i32, i32) = (f32::round(vector[0]) as i32 + self.origin.0, f32::round(vector[1]) as i32 + self.origin.1); 
             
             if !within_frame(pixel_point, self.size) {
@@ -77,5 +77,12 @@ impl DataGiffer {
             gif_frame.delay = u16::max((crate::consts::dt as u16) * 100, 1);
             encoder.write_frame(&Frame::from_rgb(self.size.0 as u16, self.size.1 as u16, frame)).unwrap();
         }
+    }
+
+    fn might_over_or_underflow(&self, vector: &Vector2<f32>) -> bool {
+       return  vector[0] as i32 >= i32::MAX - (self.origin.0 + 5)
+            || vector[1] as i32 >= i32::MAX - (self.origin.1 + 5)
+            || vector[0] as i32 <= i32::MIN + (self.origin.0 - 5)
+            || vector[1] as i32 <= i32::MIN + (self.origin.1 - 5) 
     }
 }

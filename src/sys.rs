@@ -1,4 +1,5 @@
 /// Defines a dynamic system
+use lazy_static::lazy_static;
 
 use nalgebra::Vector2;
 use rand::rngs::ThreadRng;
@@ -17,12 +18,12 @@ pub fn measurement_function(t: f32, x: Vector2<f32>, m: u8, rng: &mut ThreadRng)
     let mut noise: Vector2<f32> = Vector2::new(0.0, 0.0);
     match m {
         1 => { 
-            noise[0] = crate::consts::POISSON_DISTRIBUTION.sample(rng);
-            noise[1] = crate::consts::POISSON_DISTRIBUTION.sample(rng);
+            noise[0] = consts::POISSON_DISTRIBUTION.sample(rng);
+            noise[1] = consts::POISSON_DISTRIBUTION.sample(rng);
         }
         2 => { 
-            noise[0] = crate::consts::GAUSSIAN_DISTRIBUTION.sample(rng); 
-            noise[1] = crate::consts::GAUSSIAN_DISTRIBUTION.sample(rng); 
+            noise[0] = consts::GAUSSIAN_DISTRIBUTION.sample(rng); 
+            noise[1] = consts::GAUSSIAN_DISTRIBUTION.sample(rng); 
         }
         _ => { print!("Undefined mode.\n"); }
     }
@@ -80,3 +81,14 @@ pub fn true_model_change_posterior(m: u8, rng: &mut ThreadRng) -> u8 {
     }
     return choice;
 }
+
+pub fn clutter(amount: usize, rng: &mut ThreadRng) -> Vec<Vector2<f32>> {
+    const RANGE: f32 = (consts::GRID_SIZE.0 - consts::ORIGIN.0) as f32;
+    lazy_static!{ static ref CLUTTER: rand_distr::Uniform<f32> = rand_distr::Uniform::new(-RANGE, RANGE); }
+    let mut clutter: Vec<Vector2<f32>> = Vec::with_capacity(amount);
+    for _ in 0..amount {
+        clutter.push(Vector2::new(CLUTTER.sample(rng), CLUTTER.sample(rng)))
+    }
+    return clutter;
+}
+

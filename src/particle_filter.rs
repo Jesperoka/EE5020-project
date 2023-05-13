@@ -1,13 +1,17 @@
+use std::any::TypeId;
 use std::f32::INFINITY;
 use std::f32::consts::PI;
+use std::vec::IntoIter;
 
 use lazy_static::lazy_static;
+use nalgebra::Vector;
 use nalgebra::Vector2;
 use rand::rngs::ThreadRng;
 use rand_distr::{Uniform, Normal, Distribution};
 use rand::seq::SliceRandom;
 use rand::distributions::WeightedIndex;
 use special::Gamma;
+use itertools::Itertools; 
 
 use std::io;
 use std::io::Write;
@@ -19,12 +23,14 @@ pub struct ParticleFilter {
     pub estimates: Vec<Vector2<f32>>,
     pub samples: [(Vector2<f32>, u8); consts::INITIAL_NUM_PARTICLES],
     weights: [f32; consts::INITIAL_NUM_PARTICLES],
+    associations: [usize; consts::INITIAL_NUM_PARTICLES],
 }
 
 pub enum InitialDistributionType {
     UNIFORM,
     GAUSSIAN,
 }
+
 
 impl<'a> ParticleFilter {
 
@@ -35,6 +41,7 @@ impl<'a> ParticleFilter {
             estimates: measurements.clone(),
             samples: [(Vector2::new(0.0, 0.0), 1); consts::INITIAL_NUM_PARTICLES],
             weights: [1.0/(consts::INITIAL_NUM_PARTICLES as f32); consts::INITIAL_NUM_PARTICLES],
+            associations: [0; consts::INITIAL_NUM_PARTICLES],
         };
 
         let samples_per_measurement = consts::INITIAL_NUM_PARTICLES / measurements.len();
@@ -64,11 +71,10 @@ impl<'a> ParticleFilter {
         return particle_filter;
     }
 
-    // TODO: description
+    /// Sample from mode change and motion model posterior probability distributions
     pub fn predict(&mut self, t: f32, dt: f32, rng: &mut ThreadRng) {
-        // TODO: expand models to multiple objects
         // TODO: estimate velocity
-        let v_hat: f32 = 15.0;
+        let v_hat: f32 = 50.0;
 
         for s in &mut self.samples {
             s.1 = model_change_posterior(s.1, rng);
@@ -76,57 +82,133 @@ impl<'a> ParticleFilter {
         }
     }
 
-    // TODO: description
+    /// Update sample weights according to measurments model conditional probability.
+    /// Associates samples to their nearest measurment.
     pub fn update(&mut self, measurements: &Vec<Vector2<f32>>, rng: &mut ThreadRng) {
 
-        let lambda: f32         = consts::POISSON_MEAN; // using correct noise model for now.
-        let mu: Vector2<f32>    = Vector2::new(consts::GAUSSIAN_MEAN, consts::GAUSSIAN_MEAN);
-        let sigma: f32          = consts::GAUSSIAN_STANDARD_DEVIATION;
 
-        // WARNING: starting with as many measurments as real objects
+        
 
         for (i, s) in self.samples.iter().enumerate() {
             
-            let y = closest(s.0, measurements);
-
-            match s.1 { // WARNING: this is where we determine which y should be used for each sample
-                1 => {
-                    let diff = y - s.0;
-                    self.weights[i] = if diff[0] >= 0.0 && diff[1] >= 0.0 { bivariate_continuous_iid_poisson(diff, lambda) } else { 0.0 }; 
-                    // self.weights[i] = bivariate_iid_gaussian(y, self.samples[i] + mu, sigma); 
-                }
-                2 => { self.weights[i] = bivariate_iid_gaussian(y, s.0 + mu, sigma); }
-                _ => { print!("Undefined mode."); }
-            }
+            let (idx, y) = closest(s.0, measurements);
+            self.associations[i] = idx;
+            self.weights[i] = measurement_model_posterior(s, y);
         }
+
         // TODO: make estimates. IDEA convolve to sharpen global distribution before picking N highest weights, so that
         // we dont just get two estimates around the same point. 
-        self.estimates = vec![self.samples[argmax(&self.weights).unwrap()].0]; // TODO: make estimate
-        add_noise(&mut self.weights, rng); // helps prevent degenerate cases
+        // Estimates need to have a certain weight, and associated samples need to sum up to a
+        // certain weight as well?
+
         normalize(&mut self.weights);
+        self.estimates = self.compute_state_estimates();
+        add_noise(&mut self.weights, rng); // helps prevent degenerate cases
     }
 
-    // TODO: description
-    pub fn resample(&mut self, rng: &mut ThreadRng) {
+    // Resample locally around each measurment with associated samples, using their weights.
+    pub fn resample(&mut self, measurements: &Vec<Vector2<f32>>, rng: &mut ThreadRng) { 
         // TODO: interpolate weights to get a smoother distribution which helps with sample variety
-        let proposal_distribution = WeightedIndex::new(&self.weights).unwrap();
-        let mut sampled_values: Vec<(Vector2<f32>, u8)> = Vec::with_capacity(self.samples.len());
-        
-        // WARNING: need to rebalance number of samples between tracked objects
-        // might be a good idea to spawn particles around measurments that identified as object
-        // but how to identify an object? If an object appears, and there are some particles around
-        // it, we can check if the particles remain around it? but that wont work the way it is
-        // now, since I'm not able to track the other object...
-        //
-        // Also: do the entropy stuff? or low variance resampling?
+            
+        let n: usize = *self.associations.iter().max().unwrap();
 
-        assert!(self.samples.len() == self.weights.len());
-        for _ in 0..self.samples.len()   { sampled_values.push(self.samples[proposal_distribution.sample(rng)]); }
-        for i in 0..sampled_values.len() { self.samples[i] = sampled_values[i]; }
+        //----------- TODO: make function
+        let mut proposal_distributions: Vec<WeightedIndex<f32>> = Vec::with_capacity(n);
+        let mut weight_sets: Vec<Vec<f32>>                  = Vec::with_capacity(n);
+        let mut index_sets: Vec<Vec<usize>>                 = Vec::with_capacity(n);
+
+        for i in 0..(n+1) { weight_sets.push(Vec::new()); index_sets.push(Vec::new()); }
+
+        for (i, &association) in self.associations.iter().enumerate() { 
+            weight_sets[association].push(self.weights[i]); 
+            index_sets[association].push(i);
+        }
+
+        while weight_sets.contains(&Vec::new()) { handle_measurement_without_association(&mut weight_sets, &mut index_sets, &mut self.samples, measurements, rng); }
+
+        for weights in weight_sets { 
+            proposal_distributions.push(WeightedIndex::new(&weights).unwrap()); }
+        //-------------
+
+        let mut sampled_values: Vec<(Vector2<f32>, u8)> = Vec::with_capacity(self.samples.len());
+        for i in 0..self.samples.len() {
+            let local_distribution  = &proposal_distributions[self.associations[i]];
+            let sample_index        = index_sets[self.associations[i]][local_distribution.sample(rng)];
+            sampled_values.push(self.samples[sample_index]);                                                                                                                                                                    
+        }
+        assert!(sampled_values.len() == self.samples.len());
+        for i in 0..self.samples.len() { self.samples[i] = sampled_values[i]; }
+
+        // Also: do the entropy stuff? or low variance resampling?
+        
+        // IDEA:    1.  always add uniform samples
+        //          2.  make N = measurements.len() separate proposal dsitributions
+        //              around each measurement. 
+        //          3.  since each weight is calculated only in relation to its closest
+        //              measurement, uniform particles will be associated to new objects and
+        //              over time generate more particles around it, if it persists (i.e, it's not
+        //              noise).
+
+    }
+    fn compute_state_estimates(&self) -> Vec<Vector2<f32>> {
+        let n: usize = *self.associations.iter().max().unwrap();
+        let mut estimates: Vec<Vector2<f32>> = Vec::with_capacity(n);
+        
+        let mut sample_groups: Vec<Vec<Vector2<f32>>> = Vec::with_capacity(n);
+        let mut weight_groups: Vec<Vec<f32>> = Vec::with_capacity(n);
+        for _ in 0..(n+1) { sample_groups.push(Vec::new()); weight_groups.push(Vec::new()); }
+
+        for (i, s) in self.samples.iter().enumerate() {
+            sample_groups[self.associations[i]].push(s.0);
+            weight_groups[self.associations[i]].push(self.weights[i]);
+        }
+        
+        for (weights, samples) in weight_groups.iter().zip(sample_groups.iter()) { 
+            if samples.len() as f32 > consts::INITIAL_NUM_PARTICLES as f32 / usize::max(1, n) as f32
+            && weights.iter().sum::<f32>() > 1.0 / usize::max(1, n) as f32 { 
+                estimates.push(samples[argmax(&weights).unwrap()]); 
+            } 
+        }
+
+        return estimates;
+    }
+
+} // END impl
+
+
+
+
+
+
+// Steal some samples from the largest distribution and give them to the smallest, which can be empty
+// FIXME: name is bad.
+fn handle_measurement_without_association(weight_sets: &mut Vec<Vec<f32>>, 
+                                          index_sets: &mut Vec<Vec<usize>>, 
+                                          samples: &mut [(Vector2<f32>, u8); consts::INITIAL_NUM_PARTICLES], 
+                                          measurements: &Vec<Vector2<f32>>, 
+                                          rng: &mut ThreadRng) {
+
+    assert!(weight_sets.contains(&Vec::new()));
+    let mut longest: usize = 0;
+    let mut shortest: usize = 0;
+
+    for (idx, weights) in weight_sets.iter().enumerate() { 
+        longest = if weights.len() > weight_sets[longest].len() { idx } else { longest };
+        shortest = if weights.len() < weight_sets[shortest].len() { idx } else { shortest };
+    }
+
+    let indices_to_remove: &Vec<usize> = &rand::seq::index::sample(rng, weight_sets[longest].len(), consts::A_FEW_PARTICLES).into_vec().into_iter().sorted_by(|a, b| b.cmp(a)).collect(); // indices_to_remove.sort_by(|a, b| b.cmp(a);
+    
+    for &idx in indices_to_remove {                                                                                                                                                                                                                              
+        weight_sets[longest].remove(idx);
+        weight_sets[shortest].push(1.0 / indices_to_remove.len() as f32);
+        let stolen = index_sets[longest].remove(idx);
+        index_sets[shortest].push(stolen);
+        samples[stolen].0 = measurements[shortest] + Vector2::new(consts::ARTIFICIAL_PROCESS_NOISE.sample(rng), consts::ARTIFICIAL_PROCESS_NOISE.sample(rng)); 
     }
 }
 
-// TODO: description
+/// Model change markov chain assumption (for now, this corresponds to the true posterior)
 fn model_change_posterior(m: u8, rng: &mut ThreadRng) -> u8 {
     let mut choice = m;
     if consts::MODEL_CHANGE.sample(rng) { 
@@ -135,7 +217,7 @@ fn model_change_posterior(m: u8, rng: &mut ThreadRng) -> u8 {
     return choice;
 }
 
-// Simulation step for a particle
+/// Simulation step for a particle
 fn motion_model_posterior(t: f32, x: Vector2<f32>,  m: u8, v_hat: f32, dt: f32, rng: &mut ThreadRng) -> Vector2<f32> {
     
     // TODO: replace goals with velocity estimate for more realism/generalizability
@@ -148,6 +230,21 @@ fn motion_model_posterior(t: f32, x: Vector2<f32>,  m: u8, v_hat: f32, dt: f32, 
         2 => { return x + v_hat*(model_2_goal - x)*dt + artificial_noise; }
         _ => { println!("Undefined mode."); return Vector2::new(0.0, 0.0); }
     } 
+}
+
+/// Measurement model used for importance weighing 
+fn measurement_model_posterior(s: &(Vector2<f32>, u8), y: Vector2<f32>) -> f32 {
+    let lambda: f32         = consts::POISSON_MEAN; // using correct noise model for now.
+    let mu: Vector2<f32>    = Vector2::new(consts::GAUSSIAN_MEAN, consts::GAUSSIAN_MEAN);
+    let sigma: f32          = consts::GAUSSIAN_STANDARD_DEVIATION;
+    let weight: f32;    
+
+    match s.1 { 
+        1 => { weight = if (y - s.0)[0] >= 0.0 && (y - s.0)[1] >= 0.0 { bivariate_continuous_iid_poisson(y - s.0, lambda) }  else { 0.0 }; }
+        2 => { weight = bivariate_iid_gaussian(y, s.0 + mu, sigma); }
+        _ => { weight = 0.0; print!("Undefined mode."); }
+    }
+    return if !weight.is_nan() { weight } else { 0.0 };
 }
 
 // Density function for bivariate gaussian PDF for two i.i.d random variables x[0] and x[1]
@@ -163,20 +260,21 @@ fn bivariate_continuous_iid_poisson(x: Vector2<f32>, lambda: f32) -> f32 {
 }
 
 // Find the measurement closest to x
-fn closest(x: Vector2<f32>, measurements: &Vec<Vector2<f32>>) -> Vector2<f32> {
+fn closest(x: Vector2<f32>, measurements: &Vec<Vector2<f32>>) -> (usize, Vector2<f32>) {
     let mut norm2 = INFINITY;
     let mut closest: Vector2<f32> = (*measurements)[0]; 
-    for &y in measurements { 
+    let mut idx: usize = 0;
+    for (i, &y) in measurements.iter().enumerate() { 
         let dist = x.metric_distance(&y);
-        (norm2, closest) = if dist < norm2 { (dist, y) } else { (norm2, closest) };
+        (norm2, closest, idx) = if dist < norm2 { (dist, y, i) } else { (norm2, closest, idx) };
     }
-    return closest;
+    return (idx, closest);
 }
 
 // Scale weights to sum to one (approximately)
 fn normalize(weights: &mut [f32]) {
     let sum: f32 = weights.iter().sum();
-    assert!(sum != 0.0);
+    if sum == 0.0 { return; }
     for weight in weights { *weight /= sum; }
 }
 
@@ -187,8 +285,17 @@ fn add_noise(weights: &mut [f32], rng: &mut ThreadRng) {
 }
 
 // Get the index of the largest value element
-fn argmax(arr: &[f32]) -> Option<usize> {
+fn argmax(arr: &Vec<f32>) -> Option<usize> {
     arr.iter().enumerate().max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap()).map(|(i, _)| i)
 }
 
+// Just an implementation to print
+impl InitialDistributionType {
+    pub fn to_string(&self) -> &str {
+        return match self {
+            InitialDistributionType::UNIFORM => "Uniform",
+            InitialDistributionType::GAUSSIAN => "Gaussian",
+        };
+    }
+}
 // IDEA: get avg distance to the MAP estimate and use it to inform how large the velocity should be
