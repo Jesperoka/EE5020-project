@@ -1,3 +1,4 @@
+/// Contains main simulation and filtering loop
 mod anim;
 mod consts;
 mod particle_filter;
@@ -7,7 +8,6 @@ mod sys;
 use std::io;
 use std::io::Write;
 
-use consts::ORIGIN;
 use nalgebra::Vector2;
 use rand::thread_rng;
 

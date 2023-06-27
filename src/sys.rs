@@ -1,4 +1,4 @@
-/// Defines a dynamic system
+/// Defines a couple of modes in a hybrid dynamic system.
 use lazy_static::lazy_static;
 
 use nalgebra::Vector2;
@@ -14,6 +14,7 @@ pub struct Sys {
     pub h: fn(f32, Vector2<f32>, u8, &mut ThreadRng) -> Vector2<f32>,
 }
 
+/// A couple of different measurment noise distributions based on which mode a hybrid system is in.
 pub fn measurement_function(t: f32, x: Vector2<f32>, m: u8, rng: &mut ThreadRng) -> Vector2<f32> {
     let mut noise: Vector2<f32> = Vector2::new(0.0, 0.0);
     match m {
@@ -30,19 +31,21 @@ pub fn measurement_function(t: f32, x: Vector2<f32>, m: u8, rng: &mut ThreadRng)
     return x + noise; // TODO: give back multiple measurements and add background noise
 }
 
-
+/// A circlular reference trajectory.
 pub fn circle_path(t: f32) -> Vector2<f32> {
     const A: f32 = 20.0;
     const W: f32 = 8.5;
     return Vector2::new(A*f32::cos(W*t), A*f32::sin(W*t));
 }
 
+/// A figure-eight shaped reference trajectory.
 pub fn figure_eight_path(t: f32) -> Vector2<f32> {
     const A: f32 = 15.0;
     const W: f32 = 11.3;
     return Vector2::new(A*f32::cos(W*t), A*f32::sin(W*t)*f32::cos(W*t));
 }
 
+/// A linear reference trajectory.
 pub fn line_path(t: f32) -> Vector2<f32> {
     const A: f32 = 7.0;
     const B: f32 = -5.0;
@@ -51,6 +54,9 @@ pub fn line_path(t: f32) -> Vector2<f32> {
     return Vector2::new(X0 + A*t, Y0 + B*t)
 }
 
+/// An arbitrary nonlinear hybrid system with couple of possible modes, being
+/// controller by a simple proportional controller to follow a couple of different
+/// reference trajectories.
 #[allow(non_upper_case_globals)]
 pub fn example_hybrid_system(t: f32, x: Vector2<f32>, m: u8) -> Vector2<f32> {
     const u1_max: f32 = 5.00;
@@ -85,7 +91,7 @@ pub fn example_hybrid_system(t: f32, x: Vector2<f32>, m: u8) -> Vector2<f32> {
     return x_dot;
 }
 
-// TODO: description 
+/// The true markov chain for the jumping between modes in the hybrid system.
 pub fn true_model_change_posterior(m: u8, rng: &mut ThreadRng) -> u8 {
     let mut choice = m;
     if consts::MODEL_CHANGE.sample(rng) { 
@@ -94,6 +100,7 @@ pub fn true_model_change_posterior(m: u8, rng: &mut ThreadRng) -> u8 {
     return choice;
 }
 
+/// Generates an amount of false measurements based on a clutter distribution.
 pub fn clutter(amount: usize, rng: &mut ThreadRng) -> Vec<Vector2<f32>> {
     const RANGE: f32 = (consts::GRID_SIZE.0 - consts::ORIGIN.0) as f32;
     lazy_static!{ static ref CLUTTER: rand_distr::Uniform<f32> = rand_distr::Uniform::new(-RANGE, RANGE); }

@@ -11,6 +11,7 @@ pub struct DataGiffer {
     origin: (i32, i32),
 }
 
+/// Just checks if a (row, column) is within a grid with size (rows, columns).
 fn within_frame(point: (i32, i32), size: (i32, i32)) -> bool {
     return 0 <= point.0 && point.0 < size.0 && 0 <= point.1 && point.1 < size.1;
 }
@@ -28,6 +29,7 @@ impl DataGiffer {
         return new_data_giffer;
     }
 
+    /// Creates a default RGB frame as a 1D or flattened array.
     fn create_default_frame() -> [u8; consts::FLAT_ARRAY_SIZE] {
         let mut default_frame: [u8; consts::FLAT_ARRAY_SIZE] = [0; consts::FLAT_ARRAY_SIZE];
         assert!(consts::NUM_CHANNELS as usize == consts::BACKGROUND_COLOR.len());
@@ -38,7 +40,8 @@ impl DataGiffer {
         return default_frame;
     }
 
-    /// Draws (x,y) points as (col, -row) relative to origin in a grid
+    /// Draws (x, y) points as (column, -row) relative to a (row, column) origin point in a grid.
+    /// The points are scaled up to circles of a radius defined by a mapping from colors to radii.
     pub fn draw_points(
         &mut self,
         state_vecs: &Vec<Vector2<f32>>,
@@ -70,6 +73,7 @@ impl DataGiffer {
         return all_inside;
     }
 
+    /// Set the values of the 3 rgb indices in a flattened frame based on point in a 2D grid.
     fn draw_point(&self, pixel_point: (i32, i32), frame: &mut [u8], color: &str) {
         assert!(pixel_point.0 >= 0 && pixel_point.1 >= 0);
         let y = pixel_point.0;
@@ -81,6 +85,7 @@ impl DataGiffer {
         frame[flat_rgb_pixel_index_range].copy_from_slice(consts::COLORS.get(color).unwrap());
     }
 
+    /// Returns all points within a radius of a center point
     fn filled_circle_centered_at(&self, pixel_point: (i32, i32), radius: usize) -> Vec<(i32, i32)> {
         let radius = radius as i32;
         let center_x = pixel_point.0;
@@ -105,6 +110,7 @@ impl DataGiffer {
         return filled_circle_pixel_points;
     }
 
+    /// Encode and write gif til file.
     pub fn export_gif(&self) {
         let mut file = File::create(consts::ANIMATION_FILENAME).unwrap();
         let mut encoder =
@@ -124,6 +130,7 @@ impl DataGiffer {
         }
     }
 
+    /// Determine whether a Vector2 contains f32 values that might over- or underflow i32 numbers.
     fn might_over_or_underflow(&self, vector: &Vector2<f32>) -> bool {
         return vector[0] as i32 >= i32::MAX - (self.origin.0 + 5)
             || vector[1] as i32 >= i32::MAX - (self.origin.1 + 5)

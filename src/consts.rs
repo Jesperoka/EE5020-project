@@ -1,6 +1,6 @@
+/// Global Project Constants
 use crate::particle_filter::InitialDistributionType;
 use lazy_static::lazy_static;
-/// Global Project Constants
 use nalgebra::Vector2;
 use rand_distr::{Bernoulli, Normal, Poisson, Uniform};
 use std::collections::HashMap;
@@ -49,17 +49,17 @@ lazy_static! {
     .iter()
     .cloned()
     .collect();
-
     pub static ref COLOR_RADIUS_MAP: HashMap<&'static str, usize> = [
-    ("orange", 2),
-    ("blue", 1),
-    ("red", 1),
-    ("green", 1),
-    ("dark_matt_pink", 1),
-    ].iter().cloned().collect();
+        ("orange", 2),
+        ("blue", 1),
+        ("red", 1),
+        ("green", 1),
+        ("dark_matt_pink", 1),
+    ]
+    .iter()
+    .cloned()
+    .collect();
 }
-
-
 
 pub const GRID_SIZE: (i32, i32) = (100, 100); // (row, col)
 pub const ORIGIN: (i32, i32) = (50, 50); // (row, col)
