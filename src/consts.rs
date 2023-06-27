@@ -27,7 +27,7 @@ pub static ref MODEL_CHANGE: Bernoulli = Bernoulli::new(0.01).unwrap();
 }
 
 // Particle filter Parameters
-pub const INITIAL_NUM_PARTICLES: usize = 500;
+pub const INITIAL_NUM_PARTICLES: usize = 500; 
 pub const A_FEW_PARTICLES: usize = 5;
 pub const INITIAL_ERROR_BOUND: f32 = 50.0;
 pub const INITIAL_DISTRIBUTION_TYPE: InitialDistributionType = InitialDistributionType::UNIFORM;
@@ -49,16 +49,25 @@ lazy_static! {
     .iter()
     .cloned()
     .collect();
+
+    /// Map for deciding the radius of each plotted type of point
     pub static ref COLOR_RADIUS_MAP: HashMap<&'static str, usize> = [
-        ("orange", 2),
-        ("blue", 1),
-        ("red", 1),
-        ("green", 1),
-        ("dark_matt_pink", 1),
+        ("orange", 2),          // estimates
+        ("blue", 1),            // particles
+        ("red", 1),             // object measurments
+        ("green", 1),           // true object state
+        ("dark_matt_pink", 1),  // clutter or noise or false measurments
     ]
     .iter()
     .cloned()
     .collect();
+
+    /// Map where you can add any color you want to disable the drawing of in the output gif.
+    pub static ref DONT_DRAW: HashMap<&'static str, bool> = [
+        //("blue", true),
+        //("green", true),
+        //("orange", true),
+    ].iter().cloned().collect();
 }
 
 pub const GRID_SIZE: (i32, i32) = (100, 100); // (row, col)

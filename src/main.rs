@@ -48,7 +48,7 @@ fn main() {
     ];
     let mut clutter = sys::clutter(consts::CLUTTER_AMOUNT, rng);
     y.extend_from_slice(&clutter);
-
+    assert!(y.len() < consts::INITIAL_NUM_PARTICLES, "must have more particles than measurments just because of how initialization is implemented");
     let mut filter = particle_filter::ParticleFilter::initialize(&y, rng);
 
     for i in 0..((consts::END_TIME / consts::dt) as usize) {

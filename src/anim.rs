@@ -16,6 +16,11 @@ fn within_frame(point: (i32, i32), size: (i32, i32)) -> bool {
     return 0 <= point.0 && point.0 < size.0 && 0 <= point.1 && point.1 < size.1;
 }
 
+/// Convenience function to allow for not drawing certain points based on color
+pub fn dont_draw(color: &str) -> bool {
+    return *(consts::DONT_DRAW.get(color).unwrap_or(&false));
+}
+
 impl DataGiffer {
     pub fn new() -> Self {
         let new_data_giffer = DataGiffer {
@@ -42,17 +47,11 @@ impl DataGiffer {
 
     /// Draws (x, y) points as (column, -row) relative to a (row, column) origin point in a grid.
     /// The points are scaled up to circles of a radius defined by a mapping from colors to radii.
-    pub fn draw_points(
-        &mut self,
-        state_vecs: &Vec<Vector2<f32>>,
-        color_indices: &Vec<&str>,
-    ) -> bool {
-        let mut all_inside: bool = true;
+    pub fn draw_points(&mut self, state_vecs: &Vec<Vector2<f32>>, color_indices: &Vec<&str>) {
         let frame = &mut self.default_frame.clone();
 
         for (vector, color) in state_vecs.iter().zip(color_indices.iter()) {
-            if self.might_over_or_underflow(vector) {
-                all_inside = false;
+            if self.might_over_or_underflow(vector) || dont_draw(color) {
                 continue;
             }
 
@@ -61,16 +60,18 @@ impl DataGiffer {
                 f32::round(vector[0]) as i32 + self.origin.1,
             );
 
-            if !within_frame(pixel_point, self.size) {
-                all_inside = false;
-            } else {
-                for point in self.filled_circle_centered_at(pixel_point, *consts::COLOR_RADIUS_MAP.get(color).unwrap()) {
+            if within_frame(pixel_point, self.size) {
+                let filled_circle = self.filled_circle_centered_at(
+                    pixel_point,
+                    *consts::COLOR_RADIUS_MAP.get(color).unwrap(),
+                );
+
+                for point in filled_circle {
                     self.draw_point(point, frame, color);
                 }
             }
         }
         self.frames.push(*frame);
-        return all_inside;
     }
 
     /// Set the values of the 3 rgb indices in a flattened frame based on point in a 2D grid.
