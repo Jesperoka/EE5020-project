@@ -3,7 +3,7 @@
 ## What the filter 'sees'
 <img src=https://github.com/Jesperoka/EE5020-project/blob/messy_main/what_the_filter_sees.gif width=500>
 
-## Filter operating on 
+## Particle filter state estimation
 - Green: True state
 - Orange: Estimated state
 - Blue: Particles
