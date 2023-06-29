@@ -84,7 +84,7 @@ Finally, uniform clutter is also added to the measurements, and there is no way 
 " width=350>
 </p>
 
-In the GIF above there is always 15 false measurements. Try to see if you can keep track of the targets, with the prior knowlegde of where they are going to be. It's fairly easy when they are moving in a constant pattern together, but it gets a bit harder when they jump to separate trajectories, and trying to keep your eyes on all three quickly becomes a challenge.
+In the GIF above there are always 15 false measurements. Try to see if you can keep track of the targets, with the prior knowlegde of where they are going to be. It's fairly easy when they are moving in a constant pattern together, but it gets a bit harder when they jump to separate trajectories, and trying to keep your eyes on all three quickly becomes a challenge.
 
 ### Particle Filter
 
