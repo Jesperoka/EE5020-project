@@ -28,7 +28,7 @@ pub fn measurement_function(t: f32, x: Vector2<f32>, m: u8, rng: &mut ThreadRng)
         }
         _ => { print!("Undefined mode.\n"); }
     }
-    return x + noise; // TODO: give back multiple measurements and add background noise
+    return x + noise; 
 }
 
 /// A circlular reference trajectory.

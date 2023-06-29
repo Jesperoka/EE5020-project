@@ -119,79 +119,42 @@ impl<'a> ParticleFilter {
     pub fn resample(&mut self, measurements: &Vec<Vector2<f32>>, rng: &mut ThreadRng) {
         // TODO: interpolate weights to get a smoother distribution which helps with sample variety
 
-        let n: usize = *self.associations.iter().max().unwrap();
-
-        //----------- TODO: make function
-        let mut proposal_distributions: Vec<Option<WeightedIndex<f32>>> = Vec::with_capacity(n);
-        let mut weight_sets: Vec<Vec<f32>> = Vec::with_capacity(n);
-        let mut index_sets: Vec<Vec<usize>> = Vec::with_capacity(n);
-
-        for i in 0..n + 1 {
-            weight_sets.push(Vec::new());
-            index_sets.push(Vec::new());
-        }
-
-        for (i, &association) in self.associations.iter().enumerate() {
-            weight_sets[association].push(self.weights[i]);
-            index_sets[association].push(i);
-        }
-
-        for weights in weight_sets {
-            if weights.len() != 0 {
-                proposal_distributions.push(Some(WeightedIndex::new(&weights).unwrap()));
-            } else {
-                proposal_distributions.push(None);
-            }
-        }
-        //-------------
+        let (proposal_distributions, index_sets) = self.create_local_distributions();
 
         let mut sampled_values: Vec<(Vector3<f32>, u8)> = Vec::with_capacity(self.samples.len());
+
         for i in 0..self.samples.len() {
             if let Some(local_distribution) = &proposal_distributions[self.associations[i]] {
                 let sample_index = index_sets[self.associations[i]][local_distribution.sample(rng)];
                 sampled_values.push(self.samples[sample_index]);
             }
         }
+
         assert!(sampled_values.len() == self.samples.len());
         for i in 0..self.samples.len() {
             self.samples[i] = sampled_values[i];
         }
 
         // Put a few of the worst particles on randomly chosen measurements
-        let k_worst_indices = argmin_k(
-            &self.weights.to_vec(),
-            (0.35 * (consts::INITIAL_NUM_PARTICLES as f32)) as usize,
-        );
-        for idx in k_worst_indices {
-            let position = *measurements.choose(rng).unwrap()
-                + Vector2::new(
-                    consts::ARTIFICIAL_PROCESS_NOISE.sample(rng),
-                    consts::ARTIFICIAL_PROCESS_NOISE.sample(rng),
-                );
-            self.samples[idx] = (
-                Vector3::new(position[0], position[1], consts::ARTIFICIAL_PROCESS_NOISE.sample(rng)),
-                *consts::FILTER_MOTION_MODELS.choose(rng).unwrap(),
-            );
-            self.weights[idx] = 0.0;
+        if consts::REDISTRIBUTE_K_LOWEST {
+            self.redistribute_low_weight_particles(measurements, rng)
         }
 
         // Also: do the entropy stuff? or low variance resampling?
     }
 
-    /// Assigns the particle with the highest weight, in a given particle group associated to a
-    /// measurment, to be the state estimate for an object, if there are enough particles
-    /// and the sum of the weights in that particle group are above a threshold.
+    /// TODO: description
     fn compute_state_estimates(&mut self) -> Vec<Vector2<f32>> {
-        let num_candidates: usize = *self.associations.iter().max().unwrap() + 1;
+        let max_num_candidates: usize = *self.associations.iter().max().unwrap() + 1;
 
         self.all_previous_previous_estimates = self.all_previous_estimates.clone();
         self.all_previous_estimates = self.all_estimates.clone();
-        self.all_estimates = Vec::with_capacity(num_candidates);
+        self.all_estimates = Vec::with_capacity(max_num_candidates);
 
-        let mut sample_groups: Vec<Vec<Vector2<f32>>> = Vec::with_capacity(num_candidates);
-        let mut weight_groups: Vec<Vec<f32>> = Vec::with_capacity(num_candidates);
+        let mut sample_groups: Vec<Vec<Vector2<f32>>> = Vec::with_capacity(max_num_candidates);
+        let mut weight_groups: Vec<Vec<f32>> = Vec::with_capacity(max_num_candidates);
 
-        for _ in 0..(num_candidates + 1) {
+        for _ in 0..max_num_candidates {
             sample_groups.push(Vec::new());
             weight_groups.push(Vec::new());
         }
@@ -204,9 +167,10 @@ impl<'a> ParticleFilter {
         // All the random numbers are just tuned to get ok performance with a fair amount of clutter
         for (weights, samples) in weight_groups.iter().zip(sample_groups.iter()) {
             if samples.len() as f32
-                >= consts::INITIAL_NUM_PARTICLES as f32 / usize::max(1, num_candidates + 6) as f32
-                && weights.iter().sum::<f32>() > 1.0 / usize::max(1, num_candidates + 13) as f32
-                && weights.iter().fold(0.0, |a, &b| f32::max(a, b)) > 0.075
+                >= consts::INITIAL_NUM_PARTICLES as f32
+                    / usize::max(1, max_num_candidates + 6) as f32
+                && weights.iter().sum::<f32>() > 1.0 / usize::max(1, max_num_candidates + 13) as f32
+                && weights.iter().fold(0.0, |a, &b| f32::max(a, b)) > 0.0725
             {
                 self.all_estimates.push(samples[argmax(&weights).unwrap()]);
             }
@@ -235,6 +199,63 @@ impl<'a> ParticleFilter {
             .collect();
 
         return estimates;
+    }
+
+    /// TODO: document
+    fn redistribute_low_weight_particles(
+        &mut self,
+        measurements: &Vec<Vector2<f32>>,
+        rng: &mut ThreadRng,
+    ) {
+        let k_worst_indices = argmin_k(
+            &self.weights.to_vec(),
+            (consts::REDISTRIBUTION_PERCENTAGE * (consts::INITIAL_NUM_PARTICLES as f32)) as usize,
+        );
+        for idx in k_worst_indices {
+            let position = *measurements.choose(rng).unwrap()
+                + Vector2::new(
+                    consts::ARTIFICIAL_PROCESS_NOISE.sample(rng),
+                    consts::ARTIFICIAL_PROCESS_NOISE.sample(rng),
+                );
+            self.samples[idx] = (
+                Vector3::new(
+                    position[0],
+                    position[1],
+                    consts::ARTIFICIAL_PROCESS_NOISE.sample(rng),
+                ),
+                *consts::FILTER_MOTION_MODELS.choose(rng).unwrap(),
+            );
+            self.weights[idx] = 0.0;
+        }
+    }
+
+    /// TODO: document
+    fn create_local_distributions(&self) -> (Vec<Option<WeightedIndex<f32>>>, Vec<Vec<usize>>) {
+        let max_num_candidates: usize = *self.associations.iter().max().unwrap() + 1;
+
+        let mut proposal_distributions: Vec<Option<WeightedIndex<f32>>> =
+            Vec::with_capacity(max_num_candidates);
+        let mut weight_sets: Vec<Vec<f32>> = Vec::with_capacity(max_num_candidates);
+        let mut index_sets: Vec<Vec<usize>> = Vec::with_capacity(max_num_candidates);
+
+        for _ in 0..max_num_candidates {
+            weight_sets.push(Vec::new());
+            index_sets.push(Vec::new());
+        }
+
+        for (i, &association) in self.associations.iter().enumerate() {
+            weight_sets[association].push(self.weights[i]);
+            index_sets[association].push(i);
+        }
+
+        for weights in weight_sets {
+            if weights.len() != 0 {
+                proposal_distributions.push(Some(WeightedIndex::new(&weights).unwrap()));
+            } else {
+                proposal_distributions.push(None);
+            }
+        }
+        return (proposal_distributions, index_sets);
     }
 } // END impl
 
@@ -331,7 +352,7 @@ fn closest(x: Vector2<f32>, measurements: &Vec<Vector2<f32>>) -> (usize, Vector2
     return (idx, closest);
 }
 
-/// Scale weights to sum to one (approximately).
+/// Scale weights to sum to one (approximately), in place.
 fn normalize(weights: &mut [f32]) {
     let sum: f32 = weights.iter().sum();
     if sum == 0.0 {
@@ -345,7 +366,7 @@ fn normalize(weights: &mut [f32]) {
 lazy_static! {
     static ref SMALL_UNIFORM: Uniform<f32> = Uniform::new(0.000000001, 0.0000001);
 }
-/// Helps deal with particle weight degeneration.
+/// Helps deal with particle weight degeneration. Adds noise in place.
 fn add_noise(weights: &mut [f32], rng: &mut ThreadRng) {
     for weight in weights {
         *weight += SMALL_UNIFORM.sample(rng);

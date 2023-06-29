@@ -161,7 +161,7 @@ fn print_start_message() {
     print!("\nSimulation endtime: {}", consts::END_TIME);
     print!("\nSimulation timestep (dt): {}", consts::dt);
     print!("\nSimulation method: {}", "ERK4");
-    print!("\n\nAnimation legend:\n\nTrue state: Green\nEstimated state: Orange\nParticles: Blue\nObject oriented measurements: Red\nClutter: Dark Matt Pink");
+    print!("\n\nAnimation legend:\n\nTrue state: Green\nEstimated state: Orange\nParticles: Blue\nTarget oriented measurements: Red\nClutter: Dark Matt Pink");
     print!("\n\n");
     io::stdout().flush().unwrap();
 }

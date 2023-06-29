@@ -12,7 +12,7 @@ pub const x0: Vector2<f32> = Vector2::new(10.0, -10.0);
 #[allow(non_upper_case_globals)]
 pub const dt: f32 = 0.03333;
 pub const END_TIME: f32 = 20.0;
-pub const CLUTTER_AMOUNT: usize = 0;
+pub const CLUTTER_AMOUNT: usize = 15;
 
 // Random Number Generation Parameters and Distributions
 pub const POISSON_MEAN: f32 = 2.0;
@@ -38,6 +38,8 @@ pub const INITIAL_ERROR_BOUND: f32 = 50.0;
 pub const INITIAL_DISTRIBUTION_TYPE: InitialDistributionType = InitialDistributionType::UNIFORM;
 pub const FILTER_MOTION_MODELS: [u8; 6] = [1, 2, 3, 4, 5, 6];
 pub const HYBRID_SYSTEM_JUMPABLE_MODELS: [u8; 2] = [1, 2];
+pub const REDISTRIBUTE_K_LOWEST: bool = true;
+pub const REDISTRIBUTION_PERCENTAGE: f32 = 0.35;
 
 // Animation Parameters
 pub const ANIMATION_FILENAME: &str = "animation.gif";
