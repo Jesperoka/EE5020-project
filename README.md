@@ -67,9 +67,8 @@ TODO: change link to be main branch
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/true_dynamics_3_obj.gif?raw=true" width=350>
 </p>
 
-<p style="font-family: 'Times New Roman', serif;">
 As shown in the GIF above, the modes $m=1,2,3$ correspond to nonlinear systems being controlled to follow circular, figure-eight and linear paths repectively, and we can see jumps between modes $1$ and $2$. The jumps between models, close proximity between objects and intersecting paths give a sufficiently interesting set of targets to track that have at times hard to predict behavior.
-</p>
+
 
 
 ### Particle Filter
