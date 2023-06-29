@@ -8,7 +8,7 @@ mod sys;
 use std::io;
 use std::io::Write;
 
-use nalgebra::Vector2;
+use nalgebra::{Vector2, Vector3};
 use rand::thread_rng;
 
 fn main() {
@@ -41,24 +41,33 @@ fn main() {
 
     let mut t: f32 = 0.0;
 
-    let mut y = vec![
+    let mut y_uncluttered = vec![
         (system.h)(t, system.x, m, rng),
         (system2.h)(t, system2.x, m2, rng),
         // (system3.h)(t, system3.x, m3, rng),
     ];
     let mut clutter = sys::clutter(consts::CLUTTER_AMOUNT, rng);
-    y.extend_from_slice(&clutter);
-    assert!(y.len() < consts::INITIAL_NUM_PARTICLES, "must have more particles than measurments just because of how initialization is implemented");
-    let mut filter = particle_filter::ParticleFilter::initialize(&y, rng);
+    let mut y_cluttered = y_uncluttered.clone();
+    y_cluttered.extend_from_slice(&clutter);
+
+    assert!(y_cluttered.len() < consts::INITIAL_NUM_PARTICLES, "must have more particles than measurments");
+    let mut filter = particle_filter::ParticleFilter::initialize(&y_cluttered, rng);
 
     for i in 0..((consts::END_TIME / consts::dt) as usize) {
         t += consts::dt;
 
-        // Background clutter/noise
-        clutter = sys::clutter(consts::CLUTTER_AMOUNT, rng);
+        filter.predict(consts::dt, rng);
 
-        // Add object measurements to measurement vector
-        y = if in_grid(system3.x) {
+        m = sys::true_model_change_posterior(m, rng);
+        m2 = sys::true_model_change_posterior(m2, rng);
+        // m3 doesn't change
+
+        sim::step(t, &mut system, m, consts::dt);
+        sim::step(t, &mut system2, m2, consts::dt);
+        sim::step(t, &mut system3, m3, consts::dt);
+
+        clutter = sys::clutter(consts::CLUTTER_AMOUNT, rng);
+        y_uncluttered = if in_grid(system3.x) {
             vec![
                 (system.h)(t, system.x, m, rng),
                 (system2.h)(t, system2.x, m2, rng),
@@ -70,36 +79,21 @@ fn main() {
                 (system2.h)(t, system2.x, m2, rng),
             ]
         };
+        y_cluttered = y_uncluttered.clone();
+        y_cluttered.extend_from_slice(&clutter);
 
-        // Draw all points
+        filter.update(&y_cluttered, rng);
+        filter.resample(&y_cluttered, rng);
+
+        // Animation stuff 
         let (points_to_draw, ordered_colors) = color_helper(&vec![
-            &clutter,
-            &samples_to_points_helper(filter.samples),
-            &y,
-            &filter.estimates,
-            &vec![system.x, system2.x, system3.x],
+                                                            &clutter,
+                                                            &samples_to_points_helper(filter.samples),
+                                                            &y_uncluttered,
+                                                            &filter.estimates,
+                                                            &vec![system.x, system2.x, system3.x],
         ]);
         data_giffer.draw_points(&points_to_draw, &ordered_colors);
-
-        // Add clutter to measurment vector
-        y.extend_from_slice(&clutter);
-
-        // Particle filter prediction step
-        filter.predict(t, consts::dt, rng);
-
-        // Simulation step
-        sim::step(t, &mut system, m, consts::dt);
-        sim::step(t, &mut system2, m2, consts::dt);
-        sim::step(t, &mut system3, m3, consts::dt);
-
-        // Particle filter update and resample steps
-        filter.update(&y, rng);
-        filter.resample(&y, rng);
-
-        // Sample model change markov chain
-        m = sys::true_model_change_posterior(m, rng);
-        m2 = sys::true_model_change_posterior(m2, rng);
-        // m3 doesn't change
     }
 
     print!("\n\nDone simulating.\n\nExporting animation...");
@@ -131,11 +125,11 @@ fn color_helper<'a>(points_to_draw: &Vec<&Vec<Vector2<f32>>>) -> (Vec<Vector2<f3
 
 /// Just extracts the vectors/points we want to draw
 fn samples_to_points_helper(
-    samples: [(Vector2<f32>, u8); consts::INITIAL_NUM_PARTICLES],
+    samples: [(Vector3<f32>, u8); consts::INITIAL_NUM_PARTICLES],
 ) -> Vec<Vector2<f32>> {
     let mut point_vector: Vec<Vector2<f32>> = Vec::with_capacity(consts::INITIAL_NUM_PARTICLES);
     for (point, _) in samples {
-        point_vector.push(point);
+        point_vector.push(Vector2::new(point[0], point[1]));
     }
     return point_vector;
 }

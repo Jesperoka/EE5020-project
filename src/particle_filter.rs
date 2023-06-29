@@ -2,9 +2,8 @@
 use std::f32::consts::PI;
 use std::f32::INFINITY;
 
-use itertools::Itertools;
 use lazy_static::lazy_static;
-use nalgebra::Vector2;
+use nalgebra::{Vector2, Vector3};
 use rand::distributions::WeightedIndex;
 use rand::rngs::ThreadRng;
 use rand::seq::SliceRandom;
@@ -16,8 +15,12 @@ use crate::sys;
 
 pub struct ParticleFilter {
     pub estimates: Vec<Vector2<f32>>,
-    pub samples: [(Vector2<f32>, u8); consts::INITIAL_NUM_PARTICLES],
+    all_estimates: Vec<Vector2<f32>>,
+    all_previous_estimates: Vec<Vector2<f32>>,
+    all_previous_previous_estimates: Vec<Vector2<f32>>,
+    pub samples: [(Vector3<f32>, u8); consts::INITIAL_NUM_PARTICLES],
     weights: [f32; consts::INITIAL_NUM_PARTICLES],
+    scores: [f32; consts::INITIAL_NUM_PARTICLES],
     associations: [usize; consts::INITIAL_NUM_PARTICLES],
 }
 
@@ -31,8 +34,12 @@ impl<'a> ParticleFilter {
     pub fn initialize(measurements: &Vec<Vector2<f32>>, rng: &mut ThreadRng) -> Self {
         let mut particle_filter: ParticleFilter = ParticleFilter {
             estimates: measurements.clone(),
-            samples: [(Vector2::new(0.0, 0.0), 1); consts::INITIAL_NUM_PARTICLES],
+            all_estimates: measurements.clone(),
+            all_previous_estimates: measurements.clone(),
+            all_previous_previous_estimates: measurements.clone(),
+            samples: [(Vector3::new(0.0, 0.0, 0.0), 1); consts::INITIAL_NUM_PARTICLES],
             weights: [1.0 / (consts::INITIAL_NUM_PARTICLES as f32); consts::INITIAL_NUM_PARTICLES],
+            scores: [1.0; consts::INITIAL_NUM_PARTICLES],
             associations: [0; consts::INITIAL_NUM_PARTICLES],
         };
 
@@ -59,16 +66,25 @@ impl<'a> ParticleFilter {
         let mut i: usize = 0;
         for &y in measurements {
             for _ in 0..samples_per_measurement {
-                particle_filter.samples[i].1 = *consts::VALID_MODELS.choose(rng).unwrap();
-                particle_filter.samples[i].0 =
-                    y + Vector2::new(distribution.sample(rng), distribution.sample(rng));
+                particle_filter.samples[i].1 = *consts::FILTER_MOTION_MODELS.choose(rng).unwrap();
+                particle_filter.samples[i].0 = Vector3::new(y[0], y[1], 0.0)
+                    + Vector3::new(
+                        distribution.sample(rng),
+                        distribution.sample(rng),
+                        distribution.sample(rng),
+                    );
                 i += 1;
             }
         }
         for _ in 0..extra_samples_needed {
-            particle_filter.samples[i].1 = *consts::VALID_MODELS.choose(rng).unwrap();
-            particle_filter.samples[i].0 = *measurements.choose(rng).unwrap()
-                + Vector2::new(distribution.sample(rng), distribution.sample(rng));
+            let y_rand = *measurements.choose(rng).unwrap();
+            particle_filter.samples[i].1 = *consts::FILTER_MOTION_MODELS.choose(rng).unwrap();
+            particle_filter.samples[i].0 = Vector3::new(y_rand[0], y_rand[1], 0.0)
+                + Vector3::new(
+                    distribution.sample(rng),
+                    distribution.sample(rng),
+                    distribution.sample(rng),
+                );
             i += 1;
         }
         assert!(i == consts::INITIAL_NUM_PARTICLES);
@@ -76,13 +92,10 @@ impl<'a> ParticleFilter {
     }
 
     /// Sample from mode change and motion model posterior probability distributions
-    pub fn predict(&mut self, t: f32, dt: f32, rng: &mut ThreadRng) {
-        // TODO: estimate velocity
-        let v_hat: f32 = 50.0; // just a constant for now
-
+    pub fn predict(&mut self, dt: f32, rng: &mut ThreadRng) {
         for s in &mut self.samples {
             s.1 = model_change_posterior(s.1, rng);
-            s.0 = motion_model_posterior(t, s.0, s.1, v_hat, dt, rng);
+            s.0 = motion_model_posterior(s.0, s.1, dt, rng);
         }
     }
 
@@ -90,18 +103,15 @@ impl<'a> ParticleFilter {
     /// Associates samples to their nearest measurment.
     pub fn update(&mut self, measurements: &Vec<Vector2<f32>>, rng: &mut ThreadRng) {
         for (i, s) in self.samples.iter().enumerate() {
-            let (idx, y) = closest(s.0, measurements);
+            let position = Vector2::new(s.0[0], s.0[1]);
+            let (idx, y) = closest(position, measurements);
+
             self.associations[i] = idx;
-            self.weights[i] = measurement_model_posterior(s, y);
+            self.weights[i] = measurement_model_posterior(&(position, s.1), y);
         }
 
-        // TODO: make estimates. IDEA convolve to sharpen global distribution before picking N highest weights, so that
-        // we dont just get two estimates around the same point.
-        // Estimates need to have a certain weight, and associated samples need to sum up to a
-        // certain weight as well?
-
-        normalize(&mut self.weights);
         self.estimates = self.compute_state_estimates();
+        normalize(&mut self.weights);
         add_noise(&mut self.weights, rng); // helps prevent degenerate cases
     }
 
@@ -112,11 +122,11 @@ impl<'a> ParticleFilter {
         let n: usize = *self.associations.iter().max().unwrap();
 
         //----------- TODO: make function
-        let mut proposal_distributions: Vec<WeightedIndex<f32>> = Vec::with_capacity(n);
+        let mut proposal_distributions: Vec<Option<WeightedIndex<f32>>> = Vec::with_capacity(n);
         let mut weight_sets: Vec<Vec<f32>> = Vec::with_capacity(n);
         let mut index_sets: Vec<Vec<usize>> = Vec::with_capacity(n);
 
-        for _ in 0..(n + 1) {
+        for i in 0..n + 1 {
             weight_sets.push(Vec::new());
             index_sets.push(Vec::new());
         }
@@ -126,168 +136,145 @@ impl<'a> ParticleFilter {
             index_sets[association].push(i);
         }
 
-        while weight_sets.contains(&Vec::new()) {
-            handle_measurement_without_association(
-                &mut weight_sets,
-                &mut index_sets,
-                &mut self.samples,
-                measurements,
-                rng,
-            );
-        }
-
         for weights in weight_sets {
-            proposal_distributions.push(WeightedIndex::new(&weights).unwrap());
+            if weights.len() != 0 {
+                proposal_distributions.push(Some(WeightedIndex::new(&weights).unwrap()));
+            } else {
+                proposal_distributions.push(None);
+            }
         }
         //-------------
 
-        let mut sampled_values: Vec<(Vector2<f32>, u8)> = Vec::with_capacity(self.samples.len());
+        let mut sampled_values: Vec<(Vector3<f32>, u8)> = Vec::with_capacity(self.samples.len());
         for i in 0..self.samples.len() {
-            let local_distribution = &proposal_distributions[self.associations[i]];
-            let sample_index = index_sets[self.associations[i]][local_distribution.sample(rng)];
-            sampled_values.push(self.samples[sample_index]);
+            if let Some(local_distribution) = &proposal_distributions[self.associations[i]] {
+                let sample_index = index_sets[self.associations[i]][local_distribution.sample(rng)];
+                sampled_values.push(self.samples[sample_index]);
+            }
         }
         assert!(sampled_values.len() == self.samples.len());
         for i in 0..self.samples.len() {
             self.samples[i] = sampled_values[i];
         }
 
-        // Also: do the entropy stuff? or low variance resampling?
+        // Put a few of the worst particles on randomly chosen measurements
+        let k_worst_indices = argmin_k(
+            &self.weights.to_vec(),
+            (0.35 * (consts::INITIAL_NUM_PARTICLES as f32)) as usize,
+        );
+        for idx in k_worst_indices {
+            let position = *measurements.choose(rng).unwrap()
+                + Vector2::new(
+                    consts::ARTIFICIAL_PROCESS_NOISE.sample(rng),
+                    consts::ARTIFICIAL_PROCESS_NOISE.sample(rng),
+                );
+            self.samples[idx] = (
+                Vector3::new(position[0], position[1], consts::ARTIFICIAL_PROCESS_NOISE.sample(rng)),
+                *consts::FILTER_MOTION_MODELS.choose(rng).unwrap(),
+            );
+            self.weights[idx] = 0.0;
+        }
 
-        // IDEA:    1.  always add uniform samples
-        //          2.  make N = measurements.len() separate proposal dsitributions
-        //              around each measurement.
-        //          3.  since each weight is calculated only in relation to its closest
-        //              measurement, uniform particles will be associated to new objects and
-        //              over time generate more particles around it, if it persists (i.e, it's not
-        //              noise).
+        // Also: do the entropy stuff? or low variance resampling?
     }
 
     /// Assigns the particle with the highest weight, in a given particle group associated to a
     /// measurment, to be the state estimate for an object, if there are enough particles
     /// and the sum of the weights in that particle group are above a threshold.
-    fn compute_state_estimates(&self) -> Vec<Vector2<f32>> {
-        let num_candidates: usize = *self.associations.iter().max().unwrap();
-        let mut estimates: Vec<Vector2<f32>> = Vec::with_capacity(num_candidates);
+    fn compute_state_estimates(&mut self) -> Vec<Vector2<f32>> {
+        let num_candidates: usize = *self.associations.iter().max().unwrap() + 1;
+
+        self.all_previous_previous_estimates = self.all_previous_estimates.clone();
+        self.all_previous_estimates = self.all_estimates.clone();
+        self.all_estimates = Vec::with_capacity(num_candidates);
 
         let mut sample_groups: Vec<Vec<Vector2<f32>>> = Vec::with_capacity(num_candidates);
         let mut weight_groups: Vec<Vec<f32>> = Vec::with_capacity(num_candidates);
+
         for _ in 0..(num_candidates + 1) {
             sample_groups.push(Vec::new());
             weight_groups.push(Vec::new());
         }
 
         for (i, s) in self.samples.iter().enumerate() {
-            sample_groups[self.associations[i]].push(s.0);
+            sample_groups[self.associations[i]].push(Vector2::new(s.0[0], s.0[1]));
             weight_groups[self.associations[i]].push(self.weights[i]);
         }
 
+        // All the random numbers are just tuned to get ok performance with a fair amount of clutter
         for (weights, samples) in weight_groups.iter().zip(sample_groups.iter()) {
             if samples.len() as f32
-                > consts::INITIAL_NUM_PARTICLES as f32 / usize::max(1, num_candidates) as f32
-                && weights.iter().sum::<f32>() > 1.0 / usize::max(1, num_candidates) as f32
+                >= consts::INITIAL_NUM_PARTICLES as f32 / usize::max(1, num_candidates + 6) as f32
+                && weights.iter().sum::<f32>() > 1.0 / usize::max(1, num_candidates + 13) as f32
+                && weights.iter().fold(0.0, |a, &b| f32::max(a, b)) > 0.075
             {
-                estimates.push(samples[argmax(&weights).unwrap()]);
+                self.all_estimates.push(samples[argmax(&weights).unwrap()]);
             }
         }
+
+        // filter our teleports 2 steps back
+        let previous_estimates: Vec<Vector2<f32>> = self
+            .all_previous_estimates
+            .clone()
+            .into_iter()
+            .filter(|b| {
+                self.all_previous_previous_estimates
+                    .iter()
+                    .any(|a| (a - b).norm() <= 9.0) // Check if distance <= threshold
+            })
+            .collect();
+
+        // filter our teleports 1 step back
+        let estimates: Vec<Vector2<f32>> = self
+            .all_estimates
+            .clone()
+            .into_iter()
+            .filter(|b| {
+                previous_estimates.iter().any(|a| (a - b).norm() <= 9.0) // Check if distance <= threshold
+            })
+            .collect();
 
         return estimates;
     }
 } // END impl
 
-// FIXME: name is bad.
-/// If a measurement is the closest measurment to any particle, but does not yet have any associated
-/// particles, we use this function to steal some particles from the largest particle group and
-/// distribute them around the new potential object measurement.
-fn handle_measurement_without_association(
-    weight_sets: &mut Vec<Vec<f32>>,
-    index_sets: &mut Vec<Vec<usize>>,
-    samples: &mut [(Vector2<f32>, u8); consts::INITIAL_NUM_PARTICLES],
-    measurements: &Vec<Vector2<f32>>,
-    rng: &mut ThreadRng,
-) {
-    assert!(weight_sets.contains(&Vec::new()));
-    let mut longest: usize = 0;
-    let mut shortest: usize = 0;
-
-    for (idx, weights) in weight_sets.iter().enumerate() {
-        longest = if weights.len() > weight_sets[longest].len() {
-            idx
-        } else {
-            longest
-        };
-        shortest = if weights.len() < weight_sets[shortest].len() {
-            idx
-        } else {
-            shortest
-        };
-    }
-
-    let indices_to_remove: &Vec<usize> =
-        &rand::seq::index::sample(rng, weight_sets[longest].len(), consts::A_FEW_PARTICLES)
-            .into_vec()
-            .into_iter()
-            .sorted_by(|a, b| b.cmp(a))
-            .collect(); // indices_to_remove.sort_by(|a, b| b.cmp(a);
-
-    for &idx in indices_to_remove {
-        weight_sets[longest].remove(idx);
-        weight_sets[shortest].push(1.0 / indices_to_remove.len() as f32);
-        let stolen = index_sets[longest].remove(idx);
-        index_sets[shortest].push(stolen);
-        samples[stolen].0 = measurements[shortest]
-            + Vector2::new(
-                consts::ARTIFICIAL_PROCESS_NOISE.sample(rng),
-                consts::ARTIFICIAL_PROCESS_NOISE.sample(rng),
-            );
-    }
-}
-
-/// Model change markov chain assumption. Can change to any model, while the true chain can only
-/// change to m = 1 or m = 2.
+/// TODO: document
 fn model_change_posterior(m: u8, rng: &mut ThreadRng) -> u8 {
-    let mut choice = m;
-    if consts::MODEL_CHANGE.sample(rng) {
-        while choice == m {
-            choice = *consts::VALID_MODELS.choose(rng).unwrap();
+    let mut m = m;
+    match m {
+        1 => {
+            m = consts::MODEL_CHANGE_M1.sample(rng) as u8;
+        }
+        2 => {
+            m = consts::MODEL_CHANGE_M2.sample(rng) as u8;
+        }
+        3 => {
+            m = consts::MODEL_CHANGE_M3.sample(rng) as u8;
+        }
+        4 => {
+            m = consts::MODEL_CHANGE_M4.sample(rng) as u8;
+        }
+        5 => {
+            m = consts::MODEL_CHANGE_M5.sample(rng) as u8;
+        }
+        6 => {
+            m = consts::MODEL_CHANGE_M6.sample(rng) as u8;
+        }
+        _ => {
+            print!("oh noes..")
         }
     }
-    return choice;
+    return m + 1; // modes are indexed at 1, but I'm using WeightedIndex model change distributions
 }
 
 /// Simulation step for a particle with added noise.
-fn motion_model_posterior(
-    t: f32,
-    x: Vector2<f32>,
-    m: u8,
-    v_hat: f32,
-    dt: f32,
-    rng: &mut ThreadRng,
-) -> Vector2<f32> {
-    // TODO: replace goals with velocity estimate for more realism/generalizability
-    let model_1_goal: Vector2<f32> = sys::circle_path(t);
-    let model_2_goal: Vector2<f32> = sys::figure_eight_path(t);
-    let model_3_goal: Vector2<f32> = sys::line_path(t);
-
-    let artificial_noise: Vector2<f32> = Vector2::new(
-        consts::ARTIFICIAL_PROCESS_NOISE.sample(rng),
-        consts::ARTIFICIAL_PROCESS_NOISE.sample(rng),
+fn motion_model_posterior(x: Vector3<f32>, m: u8, dt: f32, rng: &mut ThreadRng) -> Vector3<f32> {
+    let artificial_noise: Vector3<f32> = Vector3::new(
+        1.5 * consts::ARTIFICIAL_PROCESS_NOISE.sample(rng),
+        1.5 * consts::ARTIFICIAL_PROCESS_NOISE.sample(rng),
+        1.0 * consts::ARTIFICIAL_PROCESS_NOISE.sample(rng),
     );
-    match m {
-        1 => {
-            return x + v_hat * (model_1_goal - x) * dt + artificial_noise;
-        }
-        2 => {
-            return x + v_hat * (model_2_goal - x) * dt + artificial_noise;
-        }
-        3 => {
-            return x + v_hat * (model_3_goal - x) * dt + artificial_noise;
-        }
-        _ => {
-            println!("Undefined mode.");
-            return Vector2::new(0.0, 0.0);
-        }
-    }
+    return x + dt * sys::straight_line_or_constant_turn_model(x, m) + artificial_noise;
 }
 
 /// Measurement model used for importance weighing.
@@ -298,14 +285,14 @@ fn measurement_model_posterior(s: &(Vector2<f32>, u8), y: Vector2<f32>) -> f32 {
     let weight: f32;
 
     match s.1 {
-        1 => {
+        3 | 5 => {
             weight = if (y - s.0)[0] >= 0.0 && (y - s.0)[1] >= 0.0 {
                 bivariate_continuous_iid_poisson(y - s.0, lambda)
             } else {
                 0.0
             };
         }
-        2 | 3 => {
+        1 | 2 | 4 | 6 => {
             weight = bivariate_iid_gaussian(y, s.0 + mu, sigma);
         }
         _ => {
@@ -355,7 +342,6 @@ fn normalize(weights: &mut [f32]) {
     }
 }
 
-// Helps deal with particle degeneration // FIXME: move to consts
 lazy_static! {
     static ref SMALL_UNIFORM: Uniform<f32> = Uniform::new(0.000000001, 0.0000001);
 }
@@ -368,10 +354,39 @@ fn add_noise(weights: &mut [f32], rng: &mut ThreadRng) {
 
 /// Get the index of the largest value element.
 fn argmax(arr: &Vec<f32>) -> Option<usize> {
-    arr.iter()
+    return arr
+        .iter()
         .enumerate()
         .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-        .map(|(i, _)| i)
+        .map(|(i, _)| i);
+}
+
+/// Get the index of the lowest value element.
+fn argmin(arr: &Vec<f32>) -> Option<usize> {
+    return arr
+        .iter()
+        .enumerate()
+        .min_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+        .map(|(i, _)| i);
+}
+
+/// Get the indices of the k lowest value elements.
+fn argmin_k(vector: &Vec<f32>, k: usize) -> Vec<usize> {
+    let mut indices: Vec<usize> = Vec::with_capacity(k);
+    let mut values: Vec<f32> = Vec::with_capacity(k);
+
+    for (idx, &val) in vector.iter().enumerate() {
+        if indices.len() < k {
+            indices.push(idx);
+            values.push(val);
+        } else {
+            let min_idx: usize = argmin(&values).unwrap();
+            if val < values[min_idx] {
+                values[min_idx] = val;
+            }
+        }
+    }
+    return indices;
 }
 
 /// Just an implementation to print for debugging.
