@@ -1,3 +1,46 @@
+<!-- Set up MathJax LaTeX math rendering -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"></script>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    processEscapes: true
+  }
+});
+</script>
+
+<!-- Set style of document -->
+<style>
+body {
+    max-width: 800px;
+    font-family: Arial, sans-serif;
+    font-size: 12pt;
+    line-height: 1.5;
+    margin: 2cm;
+    background-color: #0d1117;
+    color: white;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  margin-bottom: 1.5em;
+  color: white;
+}
+h1 {font-size: 20pt;} /*don't think these actually do anything*/
+h2 {font-size: 18pt;}
+h3 {font-size: 16pt;}
+h4 {font-size: 14pt;}
+h5 {font-size: 12pt;}
+h6 {font-size: 10pt;}
+
+p {
+  font-family: "Times New Roman", serif;
+  margin-bottom: 1.5em;
+  color: white;
+}
+</style>
+
 # EE5020 Sensor Signals and Data Processing - Project Report
 ## *Rust Implementation of a SIR Particle Filter for Multi-Target Tracking and Clutter Rejection* 
 
@@ -16,9 +59,11 @@ In this project, we present a Rust implementation of the Sequential Importance R
 
 ### Simulated System Dynamics
 
-An arbitrary nonlinear hybrid system is contructed and simulated using 4th order Runge-Kutta for 20 seconds. The system has 3 modes $m \in $, but switching was only made to happen between 2 of the modes, while a third target stays in mode 3 throughout the simulation, which was constructed to appear into the viewing area of the filter some seconds into the simulation.
+An arbitrary nonlinear hybrid system is constructed and simulated using 4th order Runge-Kutta for 20 seconds. The system has 3 modes $m \in \{1, 2, 3\}$, but switching was only made to happen between $m=1$ and $m=2$, while a third target stays in $m=3$ throughout the simulation. The third mode was constructed to appear into the viewing area of the filter later in the simulation.
 
-<img src=https://github.com/Jesperoka/EE5020-project/blob/messy_main/what_the_filter_sees.gif width=500>
+TODO: change link to be main branch
+
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/true_state_3_obj.gif?raw=true" width=500>
 
 ### Particle Filter
 
@@ -26,7 +71,7 @@ The particle filter is a Monte Carlo-based algorithm used to estimate the state 
 
 #### Sequential Importance Resampling
 
-The Sequential Importance Resampling (SIR) algorithm is a specific implementation of the particle filter. It involves two main steps: prediction and update. In the prediction step, particles are propagated forward in time using the system dynamics. In the update step, particles are weighted according to the likelihood of the observed data and resampled to generate a new set of particles. The resampling step aims to eliminate particles with low weights and duplicate particles with high weights, ensuring a diverse and representative set of particles for the next iteration.
+The Sequential Importance Resampling (SIR) algorithm is a specific implementation of the particle filter. It involves two main steps: prediction and update. In the prediction step, particles are propagated forward in time using the system dynamics. In the update step, particles are weighted according to the likelihood of the observed data and resampled to generate a new set of particles. The resampling step aims to eliminate particles with low weights and duplicate particles with high weigshts, ensuring a diverse and representative set of particles for the next iteration.
 
 #### Multiple Hypothesis Tracking
 
@@ -57,7 +102,7 @@ In this project, we presented a Rust implementation of the SIR particle filter f
 
 
 ## What the filter 'sees'
-<img src=https://github.com/Jesperoka/EE5020-project/blob/messy_main/what_the_filter_sees.gif width=500>
+<img src=https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/what_the_filter_sees.gif width=500>
 
 ## Particle filter state estimation
 - Green: True state
@@ -82,3 +127,8 @@ Non-standard things that were implemented:
 - Artificial process noise for particle variance
 - Artificial weight noise to protect against degenerate cases and for particle variance
 - Importance weight distributions are calculated about the nearest measurement to a particle, which means the single particle filter works as a set of parallel filters, without having to actually run and manage multiple filter instances. 
+
+<!-- Tell MathJax to typeset equations present in the document -->
+<script type="text/javascript">
+MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+</script>
