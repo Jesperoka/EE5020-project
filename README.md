@@ -1,4 +1,71 @@
-# EE5020-project
+# EE5020 Sensor Signals and Data Processing - Project Report
+Note: *This report is written in GitHub Flavored Markdown.*
+## *Rust Implementation of a SIR Particle Filter for Multi-Object Tracking and Clutter Rejection*
+
+### Table of Contents
+1. [Example](#example)
+2. [Example2](#example2)
+3. [Third Example](#third-example)
+4. [Fourth Example](#fourth-examplehttpwwwfourthexamplecom)
+
+### Introduction
+
+In this project, we present a Rust implementation of the Sequential Importance Resampling (SIR) particle filter for multiple hypothesis tracking (MHT). The SIR particle filter is a popular algorithm used in state estimation problems, and MHT is a technique for tracking multiple targets in a dynamic environment. By combining these two concepts, we aim to provide an efficient and accurate solution for multi-target tracking scenarios.
+
+## Methodology
+
+### Particle Filter
+
+The particle filter is a Monte Carlo-based algorithm used to estimate the state of a system given noisy and partial observations. It works by representing the posterior distribution of the state using a set of particles, where each particle represents a hypothesis of the state. The particles are updated recursively based on the system dynamics and the observed data, allowing us to approximate the true state distribution.
+
+### Sequential Importance Resampling
+
+The Sequential Importance Resampling (SIR) algorithm is a specific implementation of the particle filter. It involves two main steps: prediction and update. In the prediction step, particles are propagated forward in time using the system dynamics. In the update step, particles are weighted according to the likelihood of the observed data and resampled to generate a new set of particles. The resampling step aims to eliminate particles with low weights and duplicate particles with high weights, ensuring a diverse and representative set of particles for the next iteration.
+
+### Multiple Hypothesis Tracking
+
+Multiple Hypothesis Tracking (MHT) extends the particle filter to handle multiple targets. It maintains multiple hypotheses, each representing a different number and configuration of targets. The MHT algorithm generates and updates these hypotheses based on the observations and the particle filter's output. By considering multiple hypotheses, MHT provides a more robust and accurate tracking solution, especially in complex scenarios with occlusions and clutter.
+
+## Example
+
+some text
+
+## Example2
+
+some text
+
+## Third Example
+
+some text
+
+## [Fourth Example](http://www.fourthexample.com) 
+
+some text
+
+
+## Implementation in Rust
+
+We have implemented the SIR particle filter for multiple hypothesis tracking in Rust, leveraging the powerful features and performance characteristics of the language. The implementation follows a modular and object-oriented design, with the following key components:
+
+- **Particle**: Represents a particle hypothesis of the system state.
+- **ParticleFilter**: Manages the prediction, update, and resampling steps of the particle filter.
+- **Track**: Represents a target track in the multiple hypothesis tracking scenario.
+- **Tracker**: Manages the generation and update of multiple hypotheses using the particle filter.
+
+The implementation is available in the [GitHub repository](https://github.com/username/repo) along with detailed documentation and examples.
+
+## Results and Evaluation
+
+To evaluate the performance of our Rust implementation, we conducted experiments on synthetic datasets and real-world scenarios. We compared the results with existing implementations and demonstrated the effectiveness and efficiency of our approach. The experiments showed improved tracking accuracy and robustness, even in challenging scenarios with occlusions and clutter.
+
+## Conclusion
+
+In this project, we presented a Rust implementation of the SIR particle filter for multiple hypothesis tracking. The combination of particle filtering and multiple hypothesis tracking allows for accurate and robust multi-target tracking in dynamic environments. Our implementation leverages the benefits of the Rust programming language, providing both performance and safety guarantees. The results of our experiments demonstrate the effectiveness of our approach and open avenues for further research and applications in the field of multi-target tracking.
+
+---
+
+*Note: This report is written in GitHub Flavored Markdown.
+
 
 ## What the filter 'sees'
 <img src=https://github.com/Jesperoka/EE5020-project/blob/messy_main/what_the_filter_sees.gif width=500>
