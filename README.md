@@ -42,7 +42,7 @@ p {
 </style>
 
 # EE5020 Sensor Signals and Data Processing - Project Report
-## *Rust Implementation of a SIR Particle Filter for Multi-Target Tracking and Clutter Rejection* 
+## *SIR Particle Filter for Multi-Target Tracking and Clutter Rejection* 
 
 <sub>Note: *This report is written in GitHub Flavored Markdown.*<sub/>
 
@@ -55,7 +55,7 @@ p {
 ---
 ### Introduction
 
-In this project, we present a Rust implementation of the Sequential Importance Resampling (SIR) particle filter for multiple target tracking. The SIR particle filter is a popular algorithm used in state estimation problems, and there are several extensions of the filter for tracking multiple targets in a dynamic environment. By using a simple nearest measurement particle association approach combined with some non-standard additions to the filter, a fairly simple implementation is able to track multiple targets with switching dynamics to varying degrees in the face of clutter. This is done with somewhat conservative assumptions, allowing for improvements in an actual application. The goal of the project however, was solely to learn about the particle filter and extend it it some fashion.
+In this project, a Rust implementation of the Sequential Importance Resampling (SIR) particle filter for multiple target tracking is presented. The SIR particle filter is a popular algorithm used in state estimation problems, and there are several extensions of the filter for tracking multiple targets in a dynamic environment. By using a simple nearest measurement particle association approach combined with some non-standard additions to the filter, a fairly simple implementation is able to track multiple targets with switching dynamics to varying degrees in the face of clutter. This is done with somewhat conservative assumptions, allowing for improvements in an actual application. The main goal of the project to learn about the particle filter and extend it in some fashion. It's written in Rust because I wanted to. 
 
 ### Simulated System Dynamics
 
@@ -63,7 +63,13 @@ An arbitrary nonlinear hybrid system is constructed and simulated using 4th orde
 
 TODO: change link to be main branch
 
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/true_state_3_obj.gif?raw=true" width=500>
+<p align="center">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/true_dynamics_3_obj.gif?raw=true" width=350>
+</p>
+
+As shown in the GIF above, the modes $m=1,2,3$ correspond to nonlinear systems being controlled to follow circular, figure-eight and linear paths repectively, and we can see jumps between modes $1$ and $2$. The jumps between models, close proximity between objects and intersecting paths give a sufficiently interesting set of targets to track that have at times hard to predict behavior.
+
+
 
 ### Particle Filter
 
