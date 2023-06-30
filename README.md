@@ -160,6 +160,6 @@ Non-standard things that were implemented:
 - Importance weight distributions are calculated about the nearest measurement to a particle, which means the single particle filter works as a set of parallel filters, without having to actually run and manage multiple filter instances. 
 
 <!-- Tell MathJax to typeset equations present in the document -->
-<script type="text/javascript">
+<!-- <script type="text/javascript">
 MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
-</script>
+</script> -->
