@@ -27,7 +27,7 @@ h1, h2, h3, h4, h5, h6 {
   margin-bottom: 1.5em;
   color: white;
 }
-h1 {font-size: 20pt;} /*don't think these actually do anything*/
+h1 {font-size: 20pt;}
 h2 {font-size: 18pt;}
 h3 {font-size: 16pt;}
 h4 {font-size: 14pt;}
@@ -131,31 +131,33 @@ Either way, the approach taken here is to associate particles to their nearest m
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_0_clutter_no_uniform_MAP.gif?raw=true" width=350>
 <p>
 
-As we can see from the GIF above however, targets that come into view later will not be detected until the come close enough to a group of particles.
+As we can see from the GIF above however, targets that come into view later will not be detected until they come close enough to a group of particles.
 
 #### Detecting New Targets
 
-To be able to detect new targets, we need particles around the new target. One idea is to inject some uniformly distributed particles every iteration, which should allow for particles to gather around the new target over time. Random particle injection is also sometimes used to combat the loss of diversity that comes with the removal and duplication of particles in the resampling step. . The approach here though, is to skip the middle-man, and take the $k$ lowest weight particles, and redistribute them uniformly around randomly chosen measurements. In practice all measurements get some particles distributed around them.
+To be able to detect new targets, we need particles around the new target. One idea is to inject some uniformly distributed particles every iteration, which should allow for particles to gather around the new target over time. Random particle injection is also sometimes used to combat the loss of diversity that comes with the removal and duplication of particles in the resampling step. The approach here though, is to skip the middle-man, and take the $k$ lowest weight particles, and redistribute them uniformly around randomly chosen measurements. In practice all measurements get some particles distributed around them.
 
 <p align="center">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_0_clutter_with_uniform_MAP.gif?raw=true" width=350>
 <p>
 
-Since the clutter does not move like the targets, we might expect the weight of particles that might get distributed around the false measurments to immediately become close to zero, and we should be able to simply threshold on the sum of the weights in a given particle group.
+Since the clutter does not move like the targets, we might expect the weight of particles that might get distributed around the false measurments to immediately become close to zero, and we should be able to simply threshold estimates on the sum of the weights in a given particle group.
 
 <p align="center">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_15_clutter_with_uniform_sum_threshold.gif?raw=true" width=350>
 <p>
 
-Unfortunately, when there's a fair amount of clutter, life's not that easy, since clutter can appear close together on consequtive timesteps. This brings us to how we can get the filter to perform, and to the main criticism of the approach taken. 
+Unfortunately, when there's a fair amount of clutter, life's not that easy, since clutter can appear close together on consecutive timesteps. This brings us to how we can get the filter to perform, and to the main criticism of the approach taken. 
 
 ### Results and Qualitative Analysis
 
-TODO: checking if side-by-side magically works on github
+<h3 align="center">Temp: 3 and 5 clutter</h3>
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_3_clutter_with_uniform.gif?raw=true" width="48%">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_5_clutter_with_uniform.gif?raw=true" width="48%">
 
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_15_clutter_with_uniform_MAP.gif?raw=true" width="49%" style="display:inline;">
-<div style="display:inline;width:5px;"></div>
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_15_clutter_with_uniform_MAP.gif?raw=true" width="49%" style="display:inline;">
+<h3 align="center">Temp: 15 and 35 clutter</h3>
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_15_clutter_with_uniform.gif?raw=true" width="48%">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_35_clutter_with_uniform.gif?raw=true" width="48%">
 
 
 
