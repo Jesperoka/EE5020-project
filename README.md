@@ -47,12 +47,21 @@ p {
 <sub>Note: *This report is written in GitHub Flavored Markdown. Some content is invisible if you are viewing this in GitHub with Light Theme*<sub/>
 
 ---
-TODO: add all sections when done
 ### Table of Contents
-1. [Introdcution](#introduction)
-2. [Simulated System Dynamics](#simulated-system-dynamics)
-3. [Particle Filter](#particle-filter)
-4. [Fourth Example](#fourth-examplehttpwwwfourthexamplecom)
+
+1. [Introduction](#introduction)<br>
+2. [Simulated System Dynamics](#simulated-system-dynamics)<br>
+3. [Particle Filter](#particle-filter)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3.1 [Sequential Importance Resampling](#sequential-importance-resampling)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3.2 [Particle Filter Assumptions](#particle-filter-assumptions)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3.3 [Number of Particles](#number-of-particles)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3.4 [Multiple Target Tracking](#number-of-particles)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3.5 [Detecting New Targets](#number-of-particles)<br>
+4. [Results and Qualitative Analysis](#results-and-qualitative-analysis)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;4.1 [Main Criticism](#main-criticism) <br>
+5. [Improvements for Next Time](#improvements-for-next-time)<br>
+6. [Final Words](#final-words)<br>
+7. [References](#references)<br>
 ---
 ### Introduction
 
@@ -103,7 +112,7 @@ It should be noted that there are many particle filters, and even more variants 
 
 Because this is a simulated system, where the behavior of the true state is known, there is a need to assert what information is available to the particle filter and what is not. 
 
-The filter has, as mentioned access to all measurements including the clutter, and can not distinguish between them, i.e. no signal amplitudes or the like. 
+The filter has, as mentioned access to all measurements including the clutter, and can not distinguish between them, i.e. no signal amplitudes or the like.
 
 Motion modes are modeled as:
 
@@ -120,6 +129,14 @@ with a Markov chain transition matrix as:
 so it's clear that the filter does not have a completely accurate model of the true dynamics, but there is some notion of how likely it is to go from, for instance, going straight quickly to turning left or right sharply. Additionally, the measurements given to the filter only convey position, while the filters motion model state also contains a heading angle. In a real application, one would obviously try to get as good a model as possible, possibly by adaptive means.
 
 The filter also employs the addition of artificial process noise in the predicstion phase, for greater particle diversity, which in general helps with robustness against modeling errors.
+
+#### Number of Particles
+
+So far, no mention has been made to the number of particles to use in the particle filter. The results of the standard SIR filter come from approximating the analytical form of the posterior distribution of the state, that arises from applying Bayes' theorem, with a finite sum. The approximation error decreases, as you might imagine, with the number of particles, and approaches zero as the number of particles approach infinity. 
+
+One can try to adaptively change the number of particles in order to best use computational resources and keep error below a certain value, but that was not attempted in this implementation. 
+
+For practical reasons related to getting consistent results and making changes to certain parts of the implementation that will be discussed later, a particle amount of 5000 was chosen in the end, as a fairly high amount of particles, that still allowed relatively quick iterations to the codebase. At earlier stages of development, as low as 50 and 500 particles were used without much issue, but as the scope extended to tracking multiple targets in noisy conditions, it was deemed better to just set a high particle number to eliminate a variable from the development process.
 
 #### Multiple Target Tracking
 
@@ -148,6 +165,7 @@ To be able to detect new targets, we need particles around the new target. One i
 
 Since the clutter does not move like the targets, we might expect the weight of particles that might get distributed around the false measurments to immediately become close to zero, and we should be able to simply threshold estimates on the sum of the weights in a given particle group.
 
+<h4 align="center">Redistributing Particles<br> clutter amount = 15</h4>
 <p align="center">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_15_clutter_with_uniform_sum_threshold.gif?raw=true" width=350>
 <p>
@@ -171,7 +189,7 @@ additionally **estimates that pass those thresholds** are subject to filtering b
 which sets a limit on 'teleporting' between timesteps. 
 #### Results for different amounts of clutter
 
-<h4 align="center">Left: clutter amount = 3,&nbsp Right: clutter amount = 5</h4>
+<h4 align="center">&nbspLeft: clutter amount = 3,&nbsp Right: clutter amount = 5</h4>
 <p align="center">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_3_clutter_with_uniform.gif?raw=true" width="47%">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_5_clutter_with_uniform.gif?raw=true" width="47%">
@@ -180,7 +198,7 @@ which sets a limit on 'teleporting' between timesteps.
 
 For the cases of 3 and 5 false measurements at all times, the filter is able to track the targets with a few dropouts and very few false positives. Detection of the third target happens after a small delay, but seems to be decent from that point onwards.
 
-<h4 align="center">Left: clutter amount = 15,&nbsp Right: clutter amount = 35</h4>
+<h4 align="center">&nbsp&nbspLeft: clutter amount = 15,&nbsp Right: clutter amount = 35</h4>
 <p align="center">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_15_clutter_with_uniform.gif?raw=true" width="47%">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_35_clutter_with_uniform.gif?raw=true" width="47%">
@@ -195,19 +213,28 @@ For the case of 35 false measurements at all times, the tracking fails completel
 
 Another issue that may or may not have been noticed from the low clutter results, is what the consequences of the tuned heuristics are when compared to the earlier MAP estimates.
 
-<h4 align="center">Both: clutter amount = 0<br>Left: MAP Estimates,&nbsp Right: Tuned Heuristics</h4>
+<h4 align="center">Both: clutter amount = 0<br>&nbsp&nbsp&nbsp&nbspLeft: MAP Estimates,&nbsp Right: Tuned Heuristics</h4>
 <p align="center">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_0_clutter_with_uniform_MAP.gif?raw=true" width="47%">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_0_clutter_with_uniform.gif?raw=true" width="47%">
 </p>
+<p align="center"><strong>Legend:</strong> Green: true state positions | Orange: state estimates<br>Red: measurements | Blue: particles</p>
 
 The side-by-side comparison reveals that the heuristics used have a negative effect on the estimates when there is no clutter. This suggests that this is generally **not** the approach to take forward into the future, unless you know there will be very little clutter, and you can quickly fine-tune the heuristics to fit that situation. In that case, this approach is probably a bit simpler to implement, especially if extending a single target filter to multi-target, or if it's your first time implementing a particle filter (as in this case).
 
+This problem comes from the one-size-fits-all nature of tuning simple threshold heuristics, and is a fundamental problem with the approach.
+
 ### Improvements for Next Time
 
-Something something multi-object state space with variable number of objects combined density for whole state space. Doing that makes estimates easy, no need for fine tuning heuristics.
+- One combined state posterior distribution
+- Include number of target explicitly in state description
+- Estimate number of targets
+- Adaptive number of particles
+- Adaptive motion model fitting
+- Kerneled/Regularized particle filter
+- Constrain state estimate motion directly (not always a good idea)
 
-### Conclusion
+### Final words
 
 Performs alright, learned a lot, will do better next time.
 
@@ -217,17 +244,6 @@ Performs alright, learned a lot, will do better next time.
 
 
 ---
-
-Improvements that would be nice, but that aren't really that important for learning about the particle filter:
-- Online motion model estimation
-- Varible size state-space model that integrates all objects and probabilities (i.e. the 'proper' way), instead of nearest neighbor filter with some heuristics.
-- Better estimate heuristic (mine is really just MAP with some basic thresholding based on number of particles and sum of weights)
-- I was intending on adding the uniform particle insertion 'hack' that I've seen described as a method of avoiding particle collapse in the case of very accurate sensors, and it actually plays well into how I imagine the nearest neighbor approach should detect new appearing objects, but ultimately it's not all that interesting.
-
-Non-standard things that were implementesd:
-- Artificial process noise for particle variance
-- Artificial weight noise to protect against degenerate cases and for particle variance
-- Importance weight distributions are calculated about the nearest measurement to a particle, which means the single particle filter works as a set of parallel filters, without having to actually run and manage multiple filter instances. 
 
 <!-- Tell MathJax to typeset equations present in the document -->
 <!-- <script type="text/javascript">
