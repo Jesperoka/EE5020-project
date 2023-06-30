@@ -105,12 +105,7 @@ The filter has, as mentioned access to all measurements including the clutter, a
 Motion is modeled as:
 
 <p align="center">
-m = 1 | &nbsp&nbsp&nbsp&nbsp Going straight, quickly<br>
-m = 2 | &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp Going straight, slowly<br>
-m = 3 | &nbsp Turning left, large radius<br>
-m = 4 | &nbsp Turning left, small radius<br>
-m = 5 | Turning right, large radius<br>
-m = 6 | Turning right, small radius<br>
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/filter_modes.svg?raw=true" width=350>
 <p>
 
 
