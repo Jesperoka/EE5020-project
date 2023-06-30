@@ -1,5 +1,5 @@
 <!-- Set up MathJax LaTeX math rendering -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"></script>
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"></script>
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({
   tex2jax: {
@@ -7,10 +7,10 @@ MathJax.Hub.Config({
     processEscapes: true
   }
 });
-</script>
+</script> -->
 
 <!-- Set style of document -->
-<style>
+<!-- <style>
 body {
     max-width: 800px;
     font-family: Arial, sans-serif;
@@ -39,7 +39,7 @@ p {
   margin-bottom: 1.5em;
   color: white;
 }
-</style>
+</style> -->
 
 # EE5020 Sensor Signals and Data Processing - Project Report
 ## *SIR Particle Filter for Multi-Target Tracking and Clutter Rejection* 
@@ -56,7 +56,7 @@ TODO: add all sections when done
 ---
 ### Introduction
 
-In this project, a Rust implementation of the Sequential Importance Resampling (SIR) particle filter for multiple target tracking is presented. The SIR particle filter is a popular algorithm used in state estimation problems, and there are several extensions of the filter for tracking multiple targets in a dynamic environment. By using a simple nearest measurement particle association approach combined with some thresholding heuristics, a fairly simple implementation is able to track multiple targets with switching dynamics to varying degrees in the face of clutter. This is done with somewhat conservative assumptions, allowing for improvements in an actual application. The main goal of the project to learn about the particle filter and extend it in some fashion. It's written in Rust because I wanted to. 
+In this project, a Rust implementation of the Sequential Importance Resampling (SIR) particle filter for multiple target tracking is presented. The SIR particle filter is a popular algorithm used in state estimation problems, and there are several extensions of the filter for tracking multiple targets in a dynamic environment. By using a simple nearest measurement particle association approach, combined with some thresholding heuristics, a fairly simple implementation is able to track multiple targets with switching dynamics to varying degrees in the face of clutter. This is done with somewhat conservative assumptions, allowing for improvements in an actual application. The main goal of the project to learn about the particle filter and extend it in some fashion. It's written in Rust because I wanted to. 
 
 ### Simulated System Dynamics
 
@@ -96,7 +96,9 @@ The Sequential Importance Resampling (SIR) algorithm is a specific implementatio
 
 It should be noted that there are many particle filters, and even more variants to each of those filters. The description layed out here is what you will generally find to be the standard one, and its the one this project is mostly based on. For more info and comparison of different types of filter I would recommend starting with [[1]](#r1).
 
+#### Particle Filter Assumptions
 
+Because this is a simulated system, where the behavior of the true state is known, there is a need to assert what information is available to the particle filter and what is not.
 
 #### Multiple Target Tracking
 
