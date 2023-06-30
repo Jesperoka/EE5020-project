@@ -60,7 +60,7 @@ In this project, a Rust implementation of the Sequential Importance Resampling (
 
 ### Simulated System Dynamics
 
-An arbitrary nonlinear hybrid system is constructed and simulated using 4th order Runge-Kutta for 20 seconds. The system has 3 modes $m \in \{1, 2, 3\}$, but switching was only made to happen between $m=1$ and $m=2$ for two targets, while a third target stays in $m=3$ throughout the simulation. The third mode $m=3$ was constructed to have a target appear into the viewing area of the filter later in the simulation, to test the detection of new targets.
+An arbitrary nonlinear hybrid system is constructed and simulated using 4th order Runge-Kutta for 20 seconds. The system has 3 modes $m \in \{1, 2, 3\}$, but switching was only made to happen between $m=1$ and $m=2$ with a probability of $p_{jump}=0.01$ for two targets, while a third target stays in $m=3$ throughout the simulation. The third mode $m=3$ was constructed to have a target appear into the viewing area of the filter later in the simulation, to test the detection of new targets.
 
 <h4 align="center">Example of True State Dynamics</h4>
 <p align="center">
@@ -102,11 +102,19 @@ Because this is a simulated system, where the behavior of the true state is know
 
 The filter has, as mentioned access to all measurements including the clutter, and can not distinguish between them, i.e. no signal amplitudes or the like. 
 
-Motion is modeled as:
+Motion modes are modeled as:
 
 <p align="center">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/filter_modes_hd.png?raw=True" width=350>
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/filter_modes_hd.png?raw=true" width=300>
 <p>
+
+with a Markov chain transition matrix as:
+
+<p align="center">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/filter_transition_matrix.png?raw=true" width=300>
+<p>
+
+so it's clear that the filter does not have a completely accurate model of the true dynamics, but there is some notion of how likely it is to go from, for instance, going straight quickly to turning left or right sharply.
 
 #### Multiple Target Tracking
 
