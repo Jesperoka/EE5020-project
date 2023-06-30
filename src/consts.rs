@@ -12,7 +12,7 @@ pub const x0: Vector2<f32> = Vector2::new(10.0, -10.0);
 #[allow(non_upper_case_globals)]
 pub const dt: f32 = 0.03333;
 pub const END_TIME: f32 = 20.0;
-pub const CLUTTER_AMOUNT: usize = 15;
+pub const CLUTTER_AMOUNT: usize = 5;
 
 // Random Number Generation Parameters and Distributions
 pub const POISSON_MEAN: f32 = 2.0;

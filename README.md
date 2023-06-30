@@ -56,7 +56,7 @@ TODO: add all sections when done
 ---
 ### Introduction
 
-In this project, a Rust implementation of the Sequential Importance Resampling (SIR) particle filter for multiple target tracking is presented. The SIR particle filter is a popular algorithm used in state estimation problems, and there are several extensions of the filter for tracking multiple targets in a dynamic environment. By using a simple nearest measurement particle association approach, combined with some thresholding heuristics, a fairly simple implementation is able to track multiple targets with switching dynamics to varying degrees in the face of clutter. This is done with somewhat conservative assumptions, allowing for improvements in an actual application. The main goal of the project to learn about the particle filter and extend it in some fashion. It's written in Rust because I wanted to. 
+In this project, a Rust implementation of the Sequential Importance Resampling (SIR) particle filter for multiple target tracking is presented. The SIR particle filter is a popular algorithm used in state estimation problems, and there are several extensions of the filter for tracking multiple targets in a dynamic environment. By using a simple nearest measurement particle association approach, combined with some thresholding heuristics, a fairly simple implementation is able to track multiple targets with switching dynamics to varying degrees in the face of clutter. This is done with somewhat conservative assumptions, allowing for improvements in an actual application. The main goal of the project to learn about the particle filter and extend it in some fashion. It's written in Rust because I wanted to start learning the language. 
 
 ### Simulated System Dynamics
 
@@ -66,7 +66,7 @@ An arbitrary nonlinear hybrid system is constructed and simulated using 4th orde
 <p align="center">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/true_dynamics_3_obj.gif?raw=true" width=350>
 </p>
-<p align="center">Green: true state positions</p>
+<p align="center"><strong>Legend:</strong> Green: true state positions</p>
 
 As shown in the GIF above, the modes $m=1,2,3$ correspond to nonlinear systems being controlled to follow circular, figure-eight and linear paths repectively, and we can see jumps between modes $1$ and $2$. The jumps between models, close proximity between objects and intersecting paths give a sufficiently interesting set of targets to track that have, at times, hard to predict behavior.
 
@@ -76,7 +76,7 @@ Further, some noise is added to the measurements. For $m \in \{2,3\}$, i.e. the 
 <p align="center">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/true_dynamics_3_obj_with_measurements.gif?raw=true" width=350>
 </p>
-<p align="center">Green: true state positions<br>Red: measurements</p>
+<p align="center"><strong>Legend:</strong> Green: true state positions | Red: measurements</p>
 
 Finally, uniform clutter is also added to the measurements, and there is no way to distinguish between clutter and a measurement originating from a target based off any single frame/simulation step.
 
@@ -85,7 +85,7 @@ Finally, uniform clutter is also added to the measurements, and there is no way 
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/what_the_filter_sees_15.gif?raw=true
 " width=350>
 </p>
-<p align="center">Red: measurements (clutter and target oriented)</p>
+<p align="center"><strong>Legend:</strong> Red: measurements (clutter and target oriented)</p>
 
 In the GIF above there are always 15 false measurements. Try to see if you can keep track of the targets, with the prior knowlegde of where they are going to be. It's fairly easy when they are moving in a constant pattern together, but it gets a bit harder when they jump to separate trajectories, and trying to keep your eyes on all three quickly becomes a challenge.
 
@@ -117,9 +117,9 @@ with a Markov chain transition matrix as:
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/filter_transition_matrix.png?raw=true" width=450>
 <p>
 
-so it's clear that the filter does not have a completely accurate model of the true dynamics, but there is some notion of how likely it is to go from, for instance, going straight quickly to turning left or right sharply. In a real application, one would obviously just try to get as good a model as possible, possibly by adaptive means.
+so it's clear that the filter does not have a completely accurate model of the true dynamics, but there is some notion of how likely it is to go from, for instance, going straight quickly to turning left or right sharply. Additionally, the measurements given to the filter only convey position, while the filters motion model state also contains a heading angle. In a real application, one would obviously try to get as good a model as possible, possibly by adaptive means.
 
-The filter also employs the addition of artificial process noise for greater particle diversity, which in general helps with robustness against modeling errors.
+The filter also employs the addition of artificial process noise in the predicstion phase, for greater particle diversity, which in general helps with robustness against modeling errors.
 
 #### Multiple Target Tracking
 
@@ -127,43 +127,81 @@ There are multiple ways to approach tracking multiple targets. What could be sai
 
 Either way, the approach taken here is to associate particles to their nearest measurement, and perform the update and resample steps relative to that measurement. In this way we form multiple approximations of the posterior distribution of the state around measurements. If there is no clutter / false measurments, then just pick the highest weight particle in each group as you state estimate and you're done.
 
+<h4 align="center">MAP Estimates Without and With Clutter<br>Left: clutter amount = 0,&nbsp Right: clutter amount = 3</h4>
 <p align="center">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_0_clutter_no_uniform_MAP.gif?raw=true" width=350>
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_0_clutter_no_uniform_MAP.gif?raw=true" width="47%">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_3_clutter_no_uniform_MAP.gif?raw=true" width="47%">
 <p>
+<p align="center"><strong>Legend:</strong> Green: true state positions | Orange: state estimates<br>Dark Matt Pink: clutter | Red: measurements | Blue: particles</p>
 
-As we can see from the GIF above however, targets that come into view later will not be detected until they come close enough to a group of particles.
+As we can see from the GIF on the left above, targets that come into view later will not be detected until they come close enough to a group of particles. The GIF on the right reveals another issue that will be discussed shortly.
 
 #### Detecting New Targets
 
 To be able to detect new targets, we need particles around the new target. One idea is to inject some uniformly distributed particles every iteration, which should allow for particles to gather around the new target over time. Random particle injection is also sometimes used to combat the loss of diversity that comes with the removal and duplication of particles in the resampling step. The approach here though, is to skip the middle-man, and take the $k$ lowest weight particles, and redistribute them uniformly around randomly chosen measurements. In practice all measurements get some particles distributed around them.
 
+<h4 align="center">Redistributing Particles<br> clutter amount = 0</h4>
 <p align="center">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_0_clutter_with_uniform_MAP.gif?raw=true" width=350>
 <p>
+<p align="center"><strong>Legend:</strong> Green: true state positions | Orange: state estimates<br>Dark Matt Pink: clutter | Red: measurements | Blue: particles</p>
 
 Since the clutter does not move like the targets, we might expect the weight of particles that might get distributed around the false measurments to immediately become close to zero, and we should be able to simply threshold estimates on the sum of the weights in a given particle group.
 
 <p align="center">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_15_clutter_with_uniform_sum_threshold.gif?raw=true" width=350>
 <p>
+<p align="center"><strong>Legend:</strong> Green: true state positions | Orange: state estimates<br>Dark Matt Pink: clutter | Red: measurements | Blue: particles</p>
 
 Unfortunately, when there's a fair amount of clutter, life's not that easy, since clutter can appear close together on consecutive timesteps. This brings us to how we can get the filter to perform, and to the main criticism of the approach taken. 
 
 ### Results and Qualitative Analysis
 
-<h4 align="center">Temp: 3 and 5 clutter</h4>
+The quick-and-dirty solution was to create and fine-tune heuristics to eliminate state estimates in the spurious particle groups, to best as possible detect only the targets. The properties chosen to filter out (pun intended) the wrong estimates, **for a given particle group**, are as follows:
+
+> **number of particles**,<br>
+> **sum of particle weights**,<br>
+> **value of highest weight particle**
+
+additionally **estimates that pass those thresholds** are subject to filtering by:
+
+> **distance from any estimate 1 timestep back**,<br>
+> **distance from any estimate 2 timesteps back**
+
+which sets a limit on 'teleporting' between timesteps. 
+#### Results for different amounts of clutter
+
+<h4 align="center">Left: clutter amount = 3,&nbsp Right: clutter amount = 5</h4>
 <p align="center">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_3_clutter_with_uniform.gif?raw=true" width="47%">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_5_clutter_with_uniform.gif?raw=true" width="47%">
 </p>
+<p align="center"><strong>Legend:</strong> Green: true state positions | Orange: state estimates<br>Dark Matt Pink: clutter | Red: measurements | Blue: particles</p>
 
-<h4 align="center">Temp: 15 and 35 clutter</h4>
+For the cases of 3 and 5 false measurements at all times, the filter is able to track the targets with a few dropouts and very few false positives. Detection of the third target happens after a small delay, but seems to be decent from that point onwards.
+
+<h4 align="center">Left: clutter amount = 15,&nbsp Right: clutter amount = 35</h4>
 <p align="center">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_15_clutter_with_uniform.gif?raw=true" width="47%">
 <img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_35_clutter_with_uniform.gif?raw=true" width="47%">
 </p>
+<p align="center"><strong>Legend:</strong> Green: true state positions | Orange: state estimates<br>Dark Matt Pink: clutter | Red: measurements | Blue: particles</p>
 
+Facing 15 false measurements at all times, the filter does struggle with some false positives, and there are a few more dropouts which sometimes go on for longer as well. It could be argued that we're still able to successfully track the targets to some degree, and we see that the third, slow moving target, again is tracked better. 
 
+For the case of 35 false measurements at all times, the tracking fails completely for the circular and figure-eight trajectory targets, giving **at least** as many false positives as true positives, and still quite a few false negatives / dropouts as well. Investigating the third target on the other hand, there are some signs of life. The results cautiously suggest that if our area of application has very slow moving targets that we can model accurately enough, a filter like this one might still be able to give useful results with quite high levels of clutter.
+
+#### Main criticism
+
+Another issue that may or may not have been noticed from the low clutter results, is what the consequences of the tuned heuristics are when compared to the earlier MAP estimates.
+
+<h4 align="center">Both: clutter amount = 0<br>Left: MAP Estimates,&nbsp Right: Tuned Heuristics</h4>
+<p align="center">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_0_clutter_with_uniform_MAP.gif?raw=true" width="47%">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_0_clutter_with_uniform.gif?raw=true" width="47%">
+</p>
+
+The side-by-side comparison reveals that the heuristics used have a negative effect on the estimates when there is no clutter. This suggests that this is generally **not** the approach to take forward into the future, unless you know there will be very little clutter, and you can quickly fine-tune the heuristics to fit that situation. In that case, this approach is probably a bit simpler to implement, especially if extending a single target filter to multi-target, or if it's your first time implementing a particle filter (as in this case).
 
 ### Improvements for Next Time
 
@@ -186,7 +224,7 @@ Improvements that would be nice, but that aren't really that important for learn
 - Better estimate heuristic (mine is really just MAP with some basic thresholding based on number of particles and sum of weights)
 - I was intending on adding the uniform particle insertion 'hack' that I've seen described as a method of avoiding particle collapse in the case of very accurate sensors, and it actually plays well into how I imagine the nearest neighbor approach should detect new appearing objects, but ultimately it's not all that interesting.
 
-Non-standard things that were implemented:
+Non-standard things that were implementesd:
 - Artificial process noise for particle variance
 - Artificial weight noise to protect against degenerate cases and for particle variance
 - Importance weight distributions are calculated about the nearest measurement to a particle, which means the single particle filter works as a set of parallel filters, without having to actually run and manage multiple filter instances. 
