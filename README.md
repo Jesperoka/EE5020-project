@@ -105,10 +105,8 @@ The filter has, as mentioned access to all measurements including the clutter, a
 Motion is modeled as:
 
 <p align="center">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/filter_modes.svg?raw=true" width=350>
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/filter_modes_hd.png?raw=True" width=350>
 <p>
-
-
 
 #### Multiple Target Tracking
 
