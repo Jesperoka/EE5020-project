@@ -103,16 +103,17 @@ Because this is a simulated system, where the behavior of the true state is know
 The filter has, as mentioned access to all measurements including the clutter, and can not distinguish between them, i.e. no signal amplitudes or the like. 
 
 Motion is modeled as:
-<div style="text-align: center;">
-<div style="display: inline-block; text-align: left;">
-1. Going straight, quickly.<br>
-2. Going straight, slowly. <br>
-3. Turning left, large radius.<br>
-4. Turning left, small radius.<br>
-5. Turning right, large radius.<br>
-6. Turning right, small radius.<br>
-</div>
-</div>
+
+<p align="center">
+m = 1 | &nbsp&nbsp&nbsp&nbsp Going straight, quickly<br>
+m = 2 | &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp Going straight, slowly<br>
+m = 3 | &nbsp Turning left, large radius<br>
+m = 4 | &nbsp Turning left, small radius<br>
+m = 5 | Turning right, large radius<br>
+m = 6 | Turning right, small radius<br>
+<p>
+
+
 
 #### Multiple Target Tracking
 
@@ -132,7 +133,7 @@ Do I need this? Include more code snippets elsewhere?
 
 ### Results and Qualitative Analysis
 
-Should really get data on average error of estimates, number of false positives/negative etc. but ugh.
+Should really get data on average error of estimates, number of false positives/negative etc. but maybe qualitative is enough with good side-by-side comparisons?.
 
 ### Improvements for Next Time
 
