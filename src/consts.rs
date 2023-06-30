@@ -25,10 +25,10 @@ pub static ref GAUSSIAN_DISTRIBUTION: Normal<f32> = Normal::new(GAUSSIAN_MEAN, G
 pub static ref ARTIFICIAL_PROCESS_NOISE: Uniform<f32> = Uniform::new(-std::f32::consts::PI, std::f32::consts::PI);
 pub static ref MODEL_CHANGE: Bernoulli = Bernoulli::new(0.01).unwrap();     //SF,   SS,   LL,   LS,   RL,   RS   // 
 pub static ref MODEL_CHANGE_M1: WeightedIndex<f32> = WeightedIndex::new(&vec![0.25, 0.10, 0.10, 0.25, 0.05, 0.25]).unwrap();
-pub static ref MODEL_CHANGE_M2: WeightedIndex<f32> = WeightedIndex::new(&vec![0.05, 0.80, 0.05, 0.05, 0.05, 0.05]).unwrap();
+pub static ref MODEL_CHANGE_M2: WeightedIndex<f32> = WeightedIndex::new(&vec![0.04, 0.80, 0.04, 0.04, 0.04, 0.04]).unwrap();
 pub static ref MODEL_CHANGE_M3: WeightedIndex<f32> = WeightedIndex::new(&vec![0.05, 0.03, 0.80, 0.05, 0.02, 0.05]).unwrap();
-pub static ref MODEL_CHANGE_M4: WeightedIndex<f32> = WeightedIndex::new(&vec![0.25, 0.05, 0.10, 0.25, 0.05, 0.25]).unwrap();
-pub static ref MODEL_CHANGE_M5: WeightedIndex<f32> = WeightedIndex::new(&vec![0.25, 0.05, 0.05, 0.45, 0.05, 0.05]).unwrap();
+pub static ref MODEL_CHANGE_M4: WeightedIndex<f32> = WeightedIndex::new(&vec![0.26, 0.05, 0.12, 0.26, 0.05, 0.26]).unwrap();
+pub static ref MODEL_CHANGE_M5: WeightedIndex<f32> = WeightedIndex::new(&vec![0.25, 0.05, 0.10, 0.45, 0.05, 0.05]).unwrap();
 pub static ref MODEL_CHANGE_M6: WeightedIndex<f32> = WeightedIndex::new(&vec![0.25, 0.05, 0.10, 0.05, 0.05, 0.45]).unwrap();
 }
 
