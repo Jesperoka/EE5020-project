@@ -151,13 +151,17 @@ Unfortunately, when there's a fair amount of clutter, life's not that easy, sinc
 
 ### Results and Qualitative Analysis
 
-<h3 align="center">Temp: 3 and 5 clutter</h3>
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_3_clutter_with_uniform.gif?raw=true" width="48%">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_5_clutter_with_uniform.gif?raw=true" width="48%">
+<h4 align="center">Temp: 3 and 5 clutter</h4>
+<p align="center">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_3_clutter_with_uniform.gif?raw=true" width="47%">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_5_clutter_with_uniform.gif?raw=true" width="47%">
+</p>
 
-<h3 align="center">Temp: 15 and 35 clutter</h3>
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_15_clutter_with_uniform.gif?raw=true" width="48%">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_35_clutter_with_uniform.gif?raw=true" width="48%">
+<h4 align="center">Temp: 15 and 35 clutter</h4>
+<p align="center">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_15_clutter_with_uniform.gif?raw=true" width="47%">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_35_clutter_with_uniform.gif?raw=true" width="47%">
+</p>
 
 
 
