@@ -98,7 +98,21 @@ It should be noted that there are many particle filters, and even more variants 
 
 #### Particle Filter Assumptions
 
-Because this is a simulated system, where the behavior of the true state is known, there is a need to assert what information is available to the particle filter and what is not.
+Because this is a simulated system, where the behavior of the true state is known, there is a need to assert what information is available to the particle filter and what is not. 
+
+The filter has, as mentioned access to all measurements including the clutter, and can not distinguish between them, i.e. no signal amplitudes or the like. 
+
+Motion is modeled as:
+<div style="text-align: center;">
+<div style="display: inline-block; text-align: left;">
+1. Going straight, quickly.<br>
+2. Going straight, slowly. <br>
+3. Turning left, large radius.<br>
+4. Turning left, small radius.<br>
+5. Turning right, large radius.<br>
+6. Turning right, small radius.<br>
+</div>
+</div>
 
 #### Multiple Target Tracking
 
