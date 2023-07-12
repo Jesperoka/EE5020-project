@@ -91,8 +91,7 @@ Finally, uniform clutter is also added to the measurements, and there is no way 
 
 <h4 align="center">What the Filter Sees with Moderately High Clutter</h4>
 <p align="center">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/what_the_filter_sees_15.gif?raw=true
-" width=350>
+<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/what_the_filter_sees_15.gif?raw=true" width=350>
 </p>
 <p align="center"><strong>Legend:</strong> Red: measurements (clutter and target oriented)</p>
 
