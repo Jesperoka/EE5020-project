@@ -127,7 +127,7 @@ with a Markov chain transition matrix as:
 
 so it's clear that the filter does not have a completely accurate model of the true dynamics, but there is some notion of how likely it is to go from, for instance, going straight quickly to turning left or right sharply. Additionally, the measurements given to the filter only convey position, while the filters motion model state also contains a heading angle. In a real application, one would obviously try to get as good a model as possible, possibly by adaptive means.
 
-The filter also employs the addition of artificial process noise in the predicstion phase, for greater particle diversity, which in general helps with robustness against modeling errors.
+The filter also employs the addition of artificial process noise in the prediction phase, for greater particle diversity, which in general helps with robustness against modeling errors.
 
 #### Number of Particles
 
