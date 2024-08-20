@@ -73,7 +73,7 @@ An arbitrary nonlinear hybrid system is constructed and simulated using 4th orde
 
 <h4 align="center"><a id="tsd"></a>Example of True State Dynamics</h4>
 <p align="center">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/true_dynamics_3_obj.gif?raw=true" width=350>
+<img src="https://github.com/Jesperoka/EE5020-project/blob/main/results/true_dynamics_3_obj.gif?raw=true" width=350>
 </p>
 <p align="center"><strong>Legend:</strong> Green: true state positions</p>
 
@@ -83,7 +83,7 @@ Further, some noise is added to the measurements. For $m \in \{2,3\}$, i.e. the 
 
 <h4 align="center">Noisy Measurements Originating from Targets</h4>
 <p align="center">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/true_dynamics_3_obj_with_measurements.gif?raw=true" width=350>
+<img src="https://github.com/Jesperoka/EE5020-project/blob/main/results/true_dynamics_3_obj_with_measurements.gif?raw=true" width=350>
 </p>
 <p align="center"><strong>Legend:</strong> Green: true state positions | Red: measurements</p>
 
@@ -91,7 +91,7 @@ Finally, uniform clutter is also added to the measurements, and there is no way 
 
 <h4 align="center">What the Filter Sees with Moderately High Clutter</h4>
 <p align="center">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/what_the_filter_sees_15.gif?raw=true" width=350>
+<img src="https://github.com/Jesperoka/EE5020-project/blob/main/results/what_the_filter_sees_15.gif?raw=true" width=350>
 </p>
 <p align="center"><strong>Legend:</strong> Red: measurements (clutter and target oriented)</p>
 
@@ -116,13 +116,13 @@ The filter has, as mentioned access to all measurements including the clutter, a
 Motion modes are modeled as:
 
 <p align="center">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/filter_modes_hd.png?raw=true" width=300>
+<img src="https://github.com/Jesperoka/EE5020-project/blob/main/results/filter_modes_hd.png?raw=true" width=300>
 <p>
 
 with a Markov chain transition matrix as:
 
 <p align="center">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/filter_transition_matrix.png?raw=true" width=450>
+<img src="https://github.com/Jesperoka/EE5020-project/blob/main/results/filter_transition_matrix.png?raw=true" width=450>
 <p>
 
 so it's clear that the filter does not have a completely accurate model of the true dynamics, but there is some notion of how likely it is to go from, for instance, going straight quickly to turning left or right sharply. Additionally, the measurements given to the filter only convey position, while the filters motion model state also contains a heading angle. In a real application, one would obviously try to get as good a model as possible, possibly by adaptive means.
@@ -145,8 +145,8 @@ Either way, the approach taken here is to associate particles to their nearest m
 
 <h4 align="center">MAP Estimates Without and With Clutter<br>Left: clutter amount = 0,&nbsp Right: clutter amount = 3</h4>
 <p align="center">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_0_clutter_no_uniform_MAP.gif?raw=true" width="47%">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_3_clutter_no_uniform_MAP.gif?raw=true" width="47%">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/main/results/3_obj_0_clutter_no_uniform_MAP.gif?raw=true" width="47%">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/main/results/3_obj_3_clutter_no_uniform_MAP.gif?raw=true" width="47%">
 <p>
 <p align="center"><strong>Legend:</strong> Green: true state positions | Orange: state estimates<br>Dark Matt Pink: clutter | Red: measurements | Blue: particles</p>
 
@@ -158,7 +158,7 @@ To be able to detect new targets, we need particles around the new target. One i
 
 <h4 align="center">Redistributing Particles<br> clutter amount = 0</h4>
 <p align="center">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_0_clutter_with_uniform_MAP.gif?raw=true" width=350>
+<img src="https://github.com/Jesperoka/EE5020-project/blob/main/results/3_obj_0_clutter_with_uniform_MAP.gif?raw=true" width=350>
 <p>
 <p align="center"><strong>Legend:</strong> Green: true state positions | Orange: state estimates<br>Dark Matt Pink: clutter | Red: measurements | Blue: particles</p>
 
@@ -166,7 +166,7 @@ Since the clutter does not move like the targets, we might expect the weight of 
 
 <h4 align="center">Redistributing Particles<br> clutter amount = 15</h4>
 <p align="center">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_15_clutter_with_uniform_sum_threshold.gif?raw=true" width=350>
+<img src="https://github.com/Jesperoka/EE5020-project/blob/main/results/3_obj_15_clutter_with_uniform_sum_threshold.gif?raw=true" width=350>
 <p>
 <p align="center"><strong>Legend:</strong> Green: true state positions | Orange: state estimates<br>Dark Matt Pink: clutter | Red: measurements | Blue: particles</p>
 
@@ -190,8 +190,8 @@ which sets a limit on 'teleporting' between timesteps.
 
 <h4 align="center">&nbspLeft: clutter amount = 3,&nbsp Right: clutter amount = 5</h4>
 <p align="center">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_3_clutter_with_uniform.gif?raw=true" width="47%">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_5_clutter_with_uniform.gif?raw=true" width="47%">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/main/results/3_obj_3_clutter_with_uniform.gif?raw=true" width="47%">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/main/results/3_obj_5_clutter_with_uniform.gif?raw=true" width="47%">
 </p>
 <p align="center"><strong>Legend:</strong> Green: true state positions | Orange: state estimates<br>Dark Matt Pink: clutter | Red: measurements | Blue: particles</p>
 
@@ -199,8 +199,8 @@ For the cases of 3 and 5 false measurements at all times, the filter is able to 
 
 <h4 align="center">&nbsp&nbspLeft: clutter amount = 15,&nbsp Right: clutter amount = 35</h4>
 <p align="center">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_15_clutter_with_uniform.gif?raw=true" width="47%">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_35_clutter_with_uniform.gif?raw=true" width="47%">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/main/results/3_obj_15_clutter_with_uniform.gif?raw=true" width="47%">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/main/results/3_obj_35_clutter_with_uniform.gif?raw=true" width="47%">
 </p>
 <p align="center"><strong>Legend:</strong> Green: true state positions | Orange: state estimates<br>Dark Matt Pink: clutter | Red: measurements | Blue: particles</p>
 
@@ -214,8 +214,8 @@ Another issue that may or may not have been noticed from the low clutter results
 
 <h4 align="center">Both: clutter amount = 0<br>&nbsp&nbsp&nbsp&nbspLeft: MAP Estimates,&nbsp Right: Tuned Heuristics</h4>
 <p align="center">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_0_clutter_with_uniform_MAP.gif?raw=true" width="47%">
-<img src="https://github.com/Jesperoka/EE5020-project/blob/messy_main/results/3_obj_0_clutter_with_uniform.gif?raw=true" width="47%">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/main/results/3_obj_0_clutter_with_uniform_MAP.gif?raw=true" width="47%">
+<img src="https://github.com/Jesperoka/EE5020-project/blob/main/results/3_obj_0_clutter_with_uniform.gif?raw=true" width="47%">
 </p>
 <p align="center"><strong>Legend:</strong> Green: true state positions | Orange: state estimates<br>Red: measurements | Blue: particles</p>
 
